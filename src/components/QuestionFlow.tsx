@@ -15,7 +15,7 @@ const SPRING_POP    = { type: 'spring', stiffness: 520, damping: 16 } as const;
 // ── Filling-step bump (scaleY pop fires on the segment as it fills green) ────
 const FILL_BUMP = {
   scaleY: [1, 1.45, 0.88, 1.10, 1] as number[],
-  transition: { duration: 0.50, ease: [0.34, 1.56, 0.64, 1] as number[], times: [0, 0.32, 0.58, 0.80, 1] },
+  transition: { duration: 0.50, ease: [0.34, 1.56, 0.64, 1] as [number,number,number,number], times: [0, 0.32, 0.58, 0.80, 1] },
 };
 
 // ── Bar states ─────────────────────────────────────────────────────────────────
@@ -153,8 +153,8 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
       setBar(2, WHITE);
       spawnSparklesForBar(2, true);
       bump2.start({
-        scaleY: [1, 1.10, 0.97, 1.02, 1],
-        transition: { duration: 0.52, ease: [0.34, 1.2, 0.64, 1], times: [0, 0.28, 0.55, 0.78, 1] },
+        scaleY: [1, 1.10, 0.97, 1.02, 1] as number[],
+        transition: { duration: 0.52, ease: [0.34, 1.2, 0.64, 1] as [number,number,number,number], times: [0, 0.28, 0.55, 0.78, 1] },
       });
       initialEntryDoneRef.current = true;
     }, 460);
