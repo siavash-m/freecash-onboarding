@@ -219,7 +219,7 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
               animate={{ rotate: 10.03, opacity: 1 }}
               transition={{ ...SPRING_POP, delay: 0.18 }}
             >
-              <img src={GROUP_836} alt="" style={{ width: 39, height: 28 }} />
+              <img src={GROUP_836} alt="" style={{ height: 28, width: 'auto' }} />
             </motion.div>
             <div className="flex flex-col items-start leading-normal">
               <span className="font-poppins font-black text-[10px] text-[#71ffbf] uppercase whitespace-nowrap"
