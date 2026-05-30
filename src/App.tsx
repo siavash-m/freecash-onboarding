@@ -16,7 +16,7 @@ function App() {
       {screen === 'onboarding' && (
         <motion.div
           key="onboarding"
-          className="fixed inset-0"
+          className="absolute inset-0"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -29,7 +29,7 @@ function App() {
       {screen === 'question' && (
         <motion.div
           key="question"
-          className="fixed inset-0 flex flex-col"
+          className="absolute inset-0 flex flex-col"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, scale: 1.08 }}
@@ -45,7 +45,7 @@ function App() {
       {screen === 'success' && (
         <motion.div
           key="success"
-          className="fixed inset-0"
+          className="absolute inset-0"
           initial={{ opacity: 0, scale: 0.88 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
