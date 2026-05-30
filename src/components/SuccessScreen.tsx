@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence, useAnimation, LayoutGroup } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { ASSETS } from '../assets';
 
 // ── Local image assets ────────────────────────────────────────────────────────
@@ -34,11 +34,14 @@ const SPRING_ENTRY  = { type: 'spring', stiffness: 480, damping: 18 } as const;
 const EASE_DRAW     = [0.22, 1, 0.36, 1] as const;
 
 // ── Earning path data ─────────────────────────────────────────────────────────
-const PATH_STEPS = [
-  { label: 'Onboarding',     amount: '+ $5.00',  borderColor: '#00da6b', amountColor: '#00da6b', completed: true,  current: false },
-  { label: 'Play first game',amount: '+ $10.00', borderColor: '#fee810', amountColor: '#fee810', completed: false, current: true  },
-  { label: 'First cash-out', amount: '+ $15.00', borderColor: '#525268', amountColor: '#00da6b', completed: false, current: false },
-];
+function makePathSteps(earnedCents: number) {
+  const earnedStr = `+ $${(earnedCents / 100).toFixed(2)}`;
+  return [
+    { label: 'Onboarding',      amount: earnedStr,  borderColor: '#00da6b', amountColor: '#00da6b', completed: true,  current: false },
+    { label: 'Play first game', amount: '+ $10.00', borderColor: '#fee810', amountColor: '#fee810', completed: false, current: true  },
+    { label: 'First cash-out',  amount: '+ $15.00', borderColor: '#525268', amountColor: '#00da6b', completed: false, current: false },
+  ];
+}
 
 // ── Timeline helpers ──────────────────────────────────────────────────────────
 function TimelineLine({ greened = false, greyDelay, greenDelay }: { greened?: boolean; greyDelay: number; greenDelay?: number }) {
@@ -86,29 +89,22 @@ function TimelineCheck({ completed, current = false, size, greyDelay, greenDelay
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
-interface SuccessScreenProps { onGoHome: () => void }
+interface SuccessScreenProps {
+  onGoHome:    () => void;
+  earnedCents: number;
+}
 
 // ── SuccessScreen ─────────────────────────────────────────────────────────────
-export function SuccessScreen({ onGoHome }: SuccessScreenProps) {
+export function SuccessScreen({ onGoHome, earnedCents }: SuccessScreenProps) {
+  const PATH_STEPS = makePathSteps(earnedCents);
 
-  // ── Chart collapse state ──────────────────────────────────────────────────
   const [chartHidden, setChartHidden] = useState(false);
-  const chartGroupControls            = useAnimation();
 
   useEffect(() => {
-    // Celebration multi-bounce at 3.5 s (user has seen + absorbed the $5)
-    const t1 = setTimeout(() => {
-      chartGroupControls.start({
-        scale: [1, 1.12, 0.92, 1.06, 0.97, 1],
-        transition: { duration: 0.62, ease: [0.34, 1.56, 0.64, 1] },
-      });
-    }, 3500);
-
-    // Unmount chart section at 5 s — $5 pops in at ~1.6 s, so user sees it for ~3.4 s
-    const t2 = setTimeout(() => setChartHidden(true), 5000);
-
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [chartGroupControls]);
+    // Unmount chart section at 3s — snappier
+    const t1 = setTimeout(() => setChartHidden(true), 3000);
+    return () => clearTimeout(t1);
+  }, []);
 
   return (
     <div className="relative flex flex-col bg-[#141523]" style={{ height: '100dvh' }}>
@@ -134,250 +130,276 @@ export function SuccessScreen({ onGoHome }: SuccessScreenProps) {
 
         <LayoutGroup>
 
-        {/* ══ Title + Chart — unmounts via AnimatePresence when done ══════════ */}
-        <AnimatePresence>
-          {!chartHidden && (
-            <motion.div
-              key="chart-section"
-              layout
-              className="w-full flex flex-col items-center gap-6"
-              /* No initial/animate height control — natural CSS auto height */
-              exit={{ opacity: 0, transition: { duration: 0.15, delay: 0.45 } }}
-            >
-
-              {/* ── Title — fades + rises on exit ── */}
-              <motion.div className="flex flex-col gap-1 items-center text-center w-full"
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ ...SPRING_SLIDE, delay: 0.08 }}
-                exit={{ opacity: 0, y: -16, scale: 0.88,
-                  transition: { type: 'spring', stiffness: 380, damping: 22 } }}
-              >
-                <p className="font-poppins font-bold text-[24px] text-[#fee810] leading-normal">You reached first goal!</p>
-                <p className="font-poppins font-medium text-[16px] text-[#a9a9ca] leading-normal">Start earning more by playing first game.</p>
-              </motion.div>
-
-              {/* ── Chart container ── */}
-              <div className="relative shrink-0" style={{ width: W, height: H }}>
-
-                {/* Rings + arc group — celebration wiggle, then spin-shrink exit */}
-                <motion.div className="absolute inset-0"
-                  animate={chartGroupControls}
-                  exit={{ scale: 0, rotate: 10, opacity: 0,
-                    transition: { type: 'spring', stiffness: 320, damping: 20, delay: 0.14 } }}
-                >
-                  {RINGS.map(({ src, size, offset }, i) => (
-                    <motion.img key={i} src={src} alt=""
-                      className="absolute pointer-events-none select-none"
-                      style={{ width: size, height: size, left: offset, top: offset }}
-                      initial={{ opacity: 0, scale: 0.88 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ ...SPRING_ENTRY, delay: 0.2 + i * 0.065 }} />
-                  ))}
-
-                  <motion.svg width={W} height={H} className="absolute inset-0 pointer-events-none"
-                    style={{ overflow: 'visible' }}
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
-                    <defs>
-                      <filter id="yellow-glow" x="-40%" y="-40%" width="180%" height="180%">
-                        <feGaussianBlur stdDeviation="4" in="SourceGraphic" result="blur" />
-                        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                      </filter>
-                    </defs>
-                    {([0, 1.9, 3.8] as const).map((extraDelay, i) => (
-                      <motion.circle key={`pulse${i}`} cx={CX} cy={CY} r={84}
-                        stroke="rgba(254,232,16,0.50)" strokeWidth={1.5} fill="none"
-                        style={{ transformOrigin: `${CX}px ${CY}px` }}
-                        initial={{ opacity: 0, scale: 1.1 }}
-                        animate={{ scale: [1.1, 2.1], opacity: [0.42, 0] }}
-                        transition={{ delay: 2.2 + extraDelay, duration: 2.4, repeat: Infinity,
-                          repeatDelay: 5.8 - extraDelay, ease: [0.2, 0.8, 0.4, 1] }} />
-                    ))}
-                    <circle cx={CX} cy={CY} r={R} fill="none" stroke="#33334d" strokeWidth={SW} />
-                    <g transform={`rotate(-90, ${CX}, ${CY})`}>
-                      <motion.circle cx={CX} cy={CY} r={R}
-                        fill="none" stroke="#fee810" strokeWidth={SW} strokeLinecap="round"
-                        strokeDasharray={CIRC}
-                        initial={{ strokeDashoffset: CIRC }}
-                        animate={{
-                          strokeDashoffset: 0,
-                          filter: ['drop-shadow(0 0 8px rgba(254,232,16,0.80))',
-                            'drop-shadow(0 0 18px rgba(254,232,16,1.00))',
-                            'drop-shadow(0 0 8px rgba(254,232,16,0.80))'],
-                        }}
-                        transition={{
-                          strokeDashoffset: { delay: 0.55, duration: 1.35, ease: EASE_DRAW },
-                          filter: { delay: 2.2, duration: 2.8, repeat: Infinity, ease: 'easeInOut' },
-                        }}
-                        filter="url(#yellow-glow)" />
-                    </g>
-                  </motion.svg>
-                </motion.div>
-
-                {/* $5 Completed — bouncy pop-in, joyful spin+zoom exit */}
-                <motion.div
-                  className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
-                  transition={{ type: 'spring', stiffness: 650, damping: 11, delay: 1.55 }}
-                  exit={{
-                    scale: [1, 1.6, 2.2, 0],
-                    y:     [0, -10, -30, -100],
-                    rotate:[0,  15, 180, 720],
-                    opacity: [1,  1,   1,   0],
-                    transition: { duration: 0.58, ease: [0.34, 1.2, 0.64, 1] },
-                  }}
-                >
-                  <span className="font-poppins font-bold text-[40px] text-[#fee810] leading-none whitespace-nowrap">$5</span>
-                  <span className="font-poppins font-bold text-[10px] text-[#a9a9ca] text-center leading-normal">Completed</span>
-                </motion.div>
-
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ══ Earning path ════════════════════════════════════════════════════ */}
-        <motion.div layout className="flex flex-col gap-2 items-start px-6 w-full">
-          <motion.p className="font-poppins font-medium text-[12px] text-[#a9a9ca] text-center w-full leading-normal"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35, delay: 1.0 }}>
-            Your earning path
-          </motion.p>
-
-          <div className="flex gap-2 items-stretch w-full">
-            <div className="flex flex-col items-center w-[18px] self-stretch pointer-events-none select-none">
-              <div className="flex flex-col items-center flex-1 min-h-0 pt-[16px]">
-                <TimelineCheck completed size={13} greyDelay={1.02} greenDelay={1.38} />
-                <TimelineLine greened greyDelay={1.06} greenDelay={1.42} />
-              </div>
-              <div className="flex flex-col items-center flex-1 min-h-0">
-                <TimelineLine greened greyDelay={1.10} greenDelay={1.46} />
-                <TimelineCheck current size={16} completed={false} greyDelay={1.14} />
-                <TimelineLine greened={false} greyDelay={1.18} />
-              </div>
-              <div className="flex flex-col items-center flex-1 min-h-0 pb-[16px]">
-                <TimelineLine greened={false} greyDelay={1.22} />
-                <TimelineCheck completed={false} size={16} greyDelay={1.26} />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2 flex-1 min-w-0">
-              {PATH_STEPS.map((step, i) => (
-                <motion.div key={step.label}
-                  className="flex items-center w-full rounded-[8px] px-5 py-3 gap-[10px]"
-                  style={{ backgroundColor: '#141523', borderWidth: 1, borderStyle: 'solid', borderColor: '#525268' }}
-                  initial={{ opacity: 0, y: -12, borderColor: '#525268' }}
-                  animate={{ opacity: 1, y: 0, borderColor: step.borderColor }}
-                  transition={{
-                    opacity:     { ...SPRING_SLIDE, delay: 1.02 + i * 0.15 },
-                    y:           { ...SPRING_SLIDE, delay: 1.02 + i * 0.15 },
-                    borderColor: { delay: 1.40 + i * 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] },
-                  }}
-                >
-                  <span className="flex-1 font-poppins font-medium text-[14px] text-white leading-normal min-w-0">{step.label}</span>
-                  <motion.span className="font-poppins font-bold text-[14px] whitespace-nowrap leading-normal shrink-0"
-                    style={{ color: step.amountColor }}
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    transition={{ delay: 1.48 + i * 0.15, duration: 0.3 }}>
-                    {step.amount}
-                  </motion.span>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ══ Recommended game card ═══════════════════════════════════════════ */}
-        {/* Outer wrapper: layout + playful "pay attention" bounce after collapse */}
-        <motion.div layout className="w-full mt-4"
-          animate={chartHidden
-            ? { scale: [1, 1.04, 0.97, 1.01, 1], y: [0, -10, 3, -4, 0] }
-            : { scale: 1, y: 0 }
-          }
-          transition={chartHidden
-            ? { duration: 0.65, ease: [0.34, 1.56, 0.64, 1], delay: 0.45 }
-            : {}
-          }
-        >
-          {/* Inner: bouncy spring entry */}
-          <motion.div className="relative w-full"
-            initial={{ opacity: 0, y: 64, scale: 0.88 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.7 }}
+          {/* ══ Title — always visible ══════════════════════════════════════ */}
+          <motion.div className="flex flex-col gap-1 items-center text-center w-full"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...SPRING_SLIDE, delay: 0.08 }}
           >
-            {/* "RECOMMENDED FOR YOU" floating badge */}
-            <div className="absolute left-[26px] top-[-12px] flex items-center gap-[6px] px-[8px] py-[4px] rounded-[14px] z-10"
-              style={{ background: 'linear-gradient(-10deg, #fdf055 42%, #fee810 60%)', boxShadow: '0 0 8px rgba(254,232,16,0.70)' }}>
-              <img src={ICON_EDITOR_CHOICE} alt="" style={{ width: 14, height: 14 }} />
-              <span className="font-poppins font-semibold text-[10px] text-black whitespace-nowrap">RECOMMENDED FOR YOU</span>
-            </div>
+            <p className="font-poppins font-bold text-[24px] text-[#fee810] leading-normal">You reached first goal!</p>
+            <p className="font-poppins font-medium text-[16px] text-[#a9a9ca] leading-normal">Start earning more by playing first game.</p>
+          </motion.div>
 
-            {/* Game image — App Store-style cover */}
-            <div className="relative overflow-hidden rounded-tl-[16px] rounded-tr-[16px]" style={{ height: 210 }}>
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <img src={GAME_BG} alt="" className="absolute max-w-none"
-                  style={{ height: '495.35%', width: '120.06%', left: '-9.98%', top: '-152.33%' }} />
-              </div>
-              <div className="absolute bottom-0 left-0 w-full pointer-events-none"
-                style={{ height: 89,
-                  background: 'linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0))',
-                  backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)',
-                  WebkitMaskImage: 'linear-gradient(to top, black 0%, transparent 100%)',
-                  maskImage: 'linear-gradient(to top, black 0%, transparent 100%)' }} />
-              <div className="absolute left-[16px] top-[139px] w-[310px] flex items-end gap-[14px]">
-                <div className="relative shrink-0 overflow-hidden" style={{ width: 53, height: 53 }}>
-                  <img src={GAME_ICON} alt="" className="absolute max-w-none"
-                    style={{ height: '726.14%', width: '334.94%', left: '-17.05%', top: '-105.11%' }} />
-                </div>
-                <p className="font-poppins font-semibold text-[18px] text-white leading-normal w-[255px]">HomeSpaces: Match 3 Games</p>
-              </div>
-              <div className="absolute top-[15px] right-[14px] flex items-center gap-[1px] p-[4px] rounded-[6px]"
-                style={{ backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                <img src={GAME_RATING_ICON} alt="" className="object-cover rounded-[2px]" style={{ width: 16, height: 16 }} />
-                <span className="font-poppins font-medium text-[10px] text-white whitespace-nowrap">4.6</span>
-                <img src={ICON_STAR} alt="★" style={{ width: 14, height: 14 }} />
-              </div>
-            </div>
-
-            {/* Game details */}
-            <div className="flex flex-col gap-[10px] px-[18px] pt-[18px] pb-[24px] rounded-bl-[16px] rounded-br-[16px]"
-              style={{ borderWidth: 1, borderStyle: 'solid', borderColor: '#525268', borderTop: 'none' }}>
-              <div className="flex gap-[6px] flex-wrap">
-                <div className="flex items-center gap-[6px] px-[8px] py-[4px] rounded-[24px] bg-[#525268] shrink-0">
-                  <img src={ASSETS.sportsEsports} alt="" style={{ width: 14, height: 14, filter: 'brightness(0) invert(1)' }} />
-                  <span className="font-poppins text-[12px] text-white whitespace-nowrap">Casual</span>
-                </div>
-                <div className="flex items-center gap-[6px] px-[8px] py-[4px] rounded-[24px] bg-[#525268] shrink-0">
-                  <img src={ASSETS.acute} alt="" style={{ width: 14, height: 14, filter: 'brightness(0) invert(1)' }} />
-                  <span className="font-poppins text-[12px] text-white whitespace-nowrap">5 min play</span>
-                </div>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-poppins font-semibold text-[18px] text-white leading-normal">Your reward:</span>
-                <span className="font-poppins font-semibold text-[24px] text-[#fee810] leading-normal whitespace-nowrap">+$10.00</span>
-              </div>
-              <motion.button
-                className="relative flex items-center justify-center gap-[10px] w-full rounded-[6px] px-[16px] py-[12px] font-poppins font-semibold text-[16px] text-[#141524] cursor-pointer border-0 outline-none overflow-hidden"
-                style={{ backgroundColor: '#00da6b', boxShadow: '0px 4px 0px #00984c' }}
-                whileHover={{ y: -2, backgroundColor: '#00e87a' }}
-                whileTap={{ y: 1, scale: 0.97, boxShadow: '0px 1px 0px #00984c', transition: { duration: 0.06 } }}
-                transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+          {/* ══ Chart + earned amount — unmounts after 5s ═══════════════════ */}
+          <AnimatePresence>
+            {!chartHidden && (
+              <motion.div
+                key="chart-section"
+                layout
+                className="w-full flex flex-col items-center"
+                exit={{ opacity: 0, transition: { duration: 0.15, delay: 0.5 } }}
               >
-                <motion.span aria-hidden className="pointer-events-none absolute inset-0"
-                  style={{ background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.28) 50%, transparent 65%)' }}
-                  initial={{ x: '-110%' }} animate={{ x: '210%' }}
-                  transition={{ delay: 1.8, duration: 1.1, ease: [0.4, 0, 0.2, 1], repeat: Infinity, repeatDelay: 3.2 }} />
-                Start first game
-                <img src={ASSETS.arrowForward} alt="" style={{ width: 24, height: 24, filter: 'brightness(0)' }} />
-              </motion.button>
+                {/* Chart container */}
+                <div className="relative shrink-0" style={{ width: W, height: H }}>
+
+                  {/* Rings + arc group — playful spin-shrink exit */}
+                  <motion.div className="absolute inset-0"
+                    exit={{
+                      scale:   [1, 1.15, 1.05, 0],
+                      rotate:  [0, 8, -5, 720],
+                      opacity: [1, 1, 0.6, 0],
+                      transition: { duration: 0.65, ease: [0.34, 1.2, 0.64, 1], times: [0, 0.25, 0.5, 1] },
+                    }}
+                  >
+                    {RINGS.map(({ src, size, offset }, i) => (
+                      <motion.img key={i} src={src} alt=""
+                        className="absolute pointer-events-none select-none"
+                        style={{ width: size, height: size, left: offset, top: offset }}
+                        initial={{ opacity: 0, scale: 0.88 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ ...SPRING_ENTRY, delay: 0.2 + i * 0.065 }} />
+                    ))}
+
+                    <motion.svg width={W} height={H} className="absolute inset-0 pointer-events-none"
+                      style={{ overflow: 'visible' }}
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+                      <defs>
+                        <filter id="yellow-glow" x="-40%" y="-40%" width="180%" height="180%">
+                          <feGaussianBlur stdDeviation="4" in="SourceGraphic" result="blur" />
+                          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                        </filter>
+                      </defs>
+                      {([0, 0.9, 1.8] as const).map((extraDelay, i) => (
+                        <motion.circle key={`pulse${i}`} cx={CX} cy={CY} r={84}
+                          stroke="rgba(254,232,16,0.50)" strokeWidth={1.5} fill="none"
+                          style={{ transformOrigin: `${CX}px ${CY}px` }}
+                          initial={{ opacity: 0, scale: 1.1 }}
+                          animate={{ scale: [1.1, 1.4, 2.1], opacity: [0, 0.45, 0] }}
+                          transition={{ delay: 1.6 + extraDelay, duration: 2.2, repeat: Infinity,
+                            repeatDelay: 1.6, times: [0, 0.12, 1], ease: [0.2, 0.8, 0.4, 1] }} />
+                      ))}
+                      <circle cx={CX} cy={CY} r={R} fill="none" stroke="#33334d" strokeWidth={SW} />
+                      <g transform={`rotate(-90, ${CX}, ${CY})`}>
+                        <motion.circle cx={CX} cy={CY} r={R}
+                          fill="none" stroke="#fee810" strokeWidth={SW} strokeLinecap="round"
+                          strokeDasharray={CIRC}
+                          initial={{ strokeDashoffset: CIRC }}
+                          animate={{
+                            strokeDashoffset: 0,
+                            filter: ['drop-shadow(0 0 8px rgba(254,232,16,0.80))',
+                              'drop-shadow(0 0 18px rgba(254,232,16,1.00))',
+                              'drop-shadow(0 0 8px rgba(254,232,16,0.80))'],
+                          }}
+                          transition={{
+                            strokeDashoffset: { delay: 0.55, duration: 1.35, ease: EASE_DRAW },
+                            filter: { delay: 2.2, duration: 2.8, repeat: Infinity, ease: 'easeInOut' },
+                          }}
+                          filter="url(#yellow-glow)" />
+                      </g>
+                    </motion.svg>
+                  </motion.div>
+
+                  {/* Yellow orbiting dots — same CSS-keyframe approach as CircularGoal green dots */}
+                  <div className="absolute pointer-events-none orbit-cw-9"
+                    style={{ left: 0, top: 0, width: W, height: H,
+                      transformOrigin: `${CX}px ${CY}px`, zIndex: 6 }}>
+                    <div className="dot-fade-y-1800" style={{
+                      position: 'absolute', width: 5, height: 5, borderRadius: '50%',
+                      backgroundColor: '#fee810',
+                      boxShadow: '0 0 8px 2px rgba(254,232,16,0.9)',
+                      left: CX + 95 - 2.5, top: CY - 2.5,
+                    }} />
+                  </div>
+                  <div className="absolute pointer-events-none orbit-ccw-16"
+                    style={{ left: 0, top: 0, width: W, height: H,
+                      transformOrigin: `${CX}px ${CY}px`, zIndex: 6 }}>
+                    <div className="dot-fade-y-2000" style={{
+                      position: 'absolute', width: 3.5, height: 3.5, borderRadius: '50%',
+                      backgroundColor: '#fdf055',
+                      boxShadow: '0 0 7px rgba(254,232,16,1)',
+                      left: CX + 115 - 1.75, top: CY - 1.75,
+                    }} />
+                  </div>
+                  <div className="absolute pointer-events-none orbit-cw-24"
+                    style={{ left: 0, top: 0, width: W, height: H,
+                      transformOrigin: `${CX}px ${CY}px`, zIndex: 5 }}>
+                    <div className="dot-fade-y-2200" style={{
+                      position: 'absolute', width: 4, height: 4, borderRadius: '50%',
+                      backgroundColor: '#fee810', opacity: 0.85,
+                      boxShadow: '0 0 6px rgba(254,232,16,0.8)',
+                      left: CX + 130 - 2, top: CY - 2,
+                    }} />
+                  </div>
+
+                  {/* Earned amount — appears as the chart fades in */}
+                  <motion.div
+                    className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+                    style={{ zIndex: 20 }}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 520, damping: 16, delay: 0.4 }}
+                  >
+                    <span className="font-poppins font-bold text-[40px] text-[#fee810] leading-none whitespace-nowrap"
+                      style={{ textShadow: '0 0 24px rgba(254,232,16,0.8)' }}>
+                      ${(earnedCents / 100).toFixed(2)}
+                    </span>
+                    <span className="font-poppins font-medium text-[10px] text-[#a9a9ca] text-center leading-normal mt-1">Completed</span>
+                  </motion.div>
+
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ══ Earning path ════════════════════════════════════════════════ */}
+          <motion.div layout className="flex flex-col gap-2 items-start px-6 w-full">
+            <motion.p className="font-poppins font-medium text-[12px] text-[#a9a9ca] text-center w-full leading-normal"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35, delay: 1.0 }}>
+              Your earning path
+            </motion.p>
+
+            <div className="flex gap-2 items-stretch w-full">
+              <div className="flex flex-col items-center w-[18px] self-stretch pointer-events-none select-none">
+                <div className="flex flex-col items-center flex-1 min-h-0 pt-[16px]">
+                  <TimelineCheck completed size={13} greyDelay={1.02} greenDelay={1.38} />
+                  <TimelineLine greened greyDelay={1.06} greenDelay={1.42} />
+                </div>
+                <div className="flex flex-col items-center flex-1 min-h-0">
+                  <TimelineLine greened greyDelay={1.10} greenDelay={1.46} />
+                  <TimelineCheck current size={16} completed={false} greyDelay={1.14} />
+                  <TimelineLine greened={false} greyDelay={1.18} />
+                </div>
+                <div className="flex flex-col items-center flex-1 min-h-0 pb-[16px]">
+                  <TimelineLine greened={false} greyDelay={1.22} />
+                  <TimelineCheck completed={false} size={16} greyDelay={1.26} />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 flex-1 min-w-0">
+                {PATH_STEPS.map((step, i) => (
+                  <motion.div key={step.label}
+                    className="flex items-center w-full rounded-[8px] px-5 py-3 gap-[10px]"
+                    style={{ backgroundColor: '#141523', borderWidth: 1, borderStyle: 'solid', borderColor: '#525268' }}
+                    initial={{ opacity: 0, y: -12, borderColor: '#525268' }}
+                    animate={{ opacity: 1, y: 0, borderColor: step.borderColor }}
+                    transition={{
+                      opacity:     { ...SPRING_SLIDE, delay: 1.02 + i * 0.15 },
+                      y:           { ...SPRING_SLIDE, delay: 1.02 + i * 0.15 },
+                      borderColor: { delay: 1.40 + i * 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+                    }}
+                  >
+                    <span className="flex-1 font-poppins font-medium text-[14px] text-white leading-normal min-w-0">{step.label}</span>
+                    <motion.span className="font-poppins font-bold text-[14px] whitespace-nowrap leading-normal shrink-0"
+                      style={{ color: step.amountColor }}
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                      transition={{ delay: 1.48 + i * 0.15, duration: 0.3 }}>
+                      {step.amount}
+                    </motion.span>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </motion.div>
-        </motion.div>
 
-        </LayoutGroup>{/* end layout group */}
-      </div>{/* end scrollable area */}
+          {/* ══ Recommended game card ═══════════════════════════════════════ */}
+          <motion.div layout className="w-full mt-4"
+            animate={chartHidden
+              ? { scale: [1, 1.04, 0.97, 1.01, 1], y: [0, -10, 3, -4, 0] }
+              : { scale: 1, y: 0 }
+            }
+            transition={chartHidden
+              ? { duration: 0.65, ease: [0.34, 1.56, 0.64, 1], delay: 0.45 }
+              : {}
+            }
+          >
+            <motion.div className="relative w-full"
+              initial={{ opacity: 0, y: 64, scale: 0.88 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.7 }}
+            >
+              {/* "RECOMMENDED FOR YOU" badge */}
+              <div className="absolute left-[26px] top-[-12px] flex items-center gap-[6px] px-[8px] py-[4px] rounded-[14px] z-10"
+                style={{ background: 'linear-gradient(-10deg, #fdf055 42%, #fee810 60%)', boxShadow: '0 0 8px rgba(254,232,16,0.70)' }}>
+                <img src={ICON_EDITOR_CHOICE} alt="" style={{ width: 14, height: 14 }} />
+                <span className="font-poppins font-semibold text-[10px] text-black whitespace-nowrap">RECOMMENDED FOR YOU</span>
+              </div>
 
-      {/* ══ Go to home — pinned at bottom (same position as onboarding CTA / Skip) */}
+              {/* Game image */}
+              <div className="relative overflow-hidden rounded-tl-[16px] rounded-tr-[16px]" style={{ height: 210 }}>
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <img src={GAME_BG} alt="" className="absolute max-w-none"
+                    style={{ height: '495.35%', width: '120.06%', left: '-9.98%', top: '-152.33%' }} />
+                </div>
+                {/* Smooth cinema-fade gradient — no backdrop-filter to avoid abrupt edge */}
+                <div className="absolute bottom-0 left-0 w-full pointer-events-none"
+                  style={{
+                    height: 120,
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.65) 25%, rgba(0,0,0,0.3) 55%, transparent 100%)',
+                  }} />
+                <div className="absolute left-[16px] top-[139px] w-[310px] flex items-end gap-[14px]">
+                  <div className="relative shrink-0 overflow-hidden" style={{ width: 53, height: 53 }}>
+                    <img src={GAME_ICON} alt="" className="absolute max-w-none"
+                      style={{ height: '726.14%', width: '334.94%', left: '-17.05%', top: '-105.11%' }} />
+                  </div>
+                  <p className="font-poppins font-semibold text-[18px] text-white leading-normal w-[255px]">HomeSpaces: Match 3 Games</p>
+                </div>
+                <div className="absolute top-[15px] right-[14px] flex items-center gap-[1px] p-[4px] rounded-[6px]"
+                  style={{ backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                  <img src={GAME_RATING_ICON} alt="" className="object-cover rounded-[2px]" style={{ width: 16, height: 16 }} />
+                  <span className="font-poppins font-medium text-[10px] text-white whitespace-nowrap">4.6</span>
+                  <img src={ICON_STAR} alt="★" style={{ width: 14, height: 14 }} />
+                </div>
+              </div>
+
+              {/* Game details */}
+              <div className="flex flex-col gap-[10px] px-[18px] pt-[18px] pb-[24px] rounded-bl-[16px] rounded-br-[16px]"
+                style={{ borderWidth: 1, borderStyle: 'solid', borderColor: '#525268', borderTop: 'none' }}>
+                <div className="flex gap-[6px] flex-wrap">
+                  <div className="flex items-center gap-[6px] px-[8px] py-[4px] rounded-[24px] bg-[#525268] shrink-0">
+                    <img src={ASSETS.sportsEsports} alt="" style={{ width: 14, height: 14, filter: 'brightness(0) invert(1)' }} />
+                    <span className="font-poppins text-[12px] text-white whitespace-nowrap">Casual</span>
+                  </div>
+                  <div className="flex items-center gap-[6px] px-[8px] py-[4px] rounded-[24px] bg-[#525268] shrink-0">
+                    <img src={ASSETS.acute} alt="" style={{ width: 14, height: 14, filter: 'brightness(0) invert(1)' }} />
+                    <span className="font-poppins text-[12px] text-white whitespace-nowrap">5 min play</span>
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-poppins font-semibold text-[18px] text-white leading-normal">Your reward:</span>
+                  <span className="font-poppins font-semibold text-[24px] text-[#fee810] leading-normal whitespace-nowrap">+$10.00</span>
+                </div>
+                <motion.button
+                  className="relative flex items-center justify-center gap-[10px] w-full rounded-[6px] px-[16px] py-[12px] font-poppins font-semibold text-[16px] text-[#141524] cursor-pointer border-0 outline-none overflow-hidden"
+                  style={{ backgroundColor: '#00da6b', boxShadow: '0px 4px 0px #00984c' }}
+                  whileHover={{ y: -2, backgroundColor: '#00e87a' }}
+                  whileTap={{ y: 1, scale: 0.97, boxShadow: '0px 1px 0px #00984c', transition: { duration: 0.06 } }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+                >
+                  <motion.span aria-hidden className="pointer-events-none absolute inset-0"
+                    style={{ background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.28) 50%, transparent 65%)' }}
+                    initial={{ x: '-110%' }} animate={{ x: '210%' }}
+                    transition={{ delay: 1.8, duration: 1.1, ease: [0.4, 0, 0.2, 1], repeat: Infinity, repeatDelay: 3.2 }} />
+                  Start first game
+                  <img src={ASSETS.arrowForward} alt="" style={{ width: 24, height: 24, filter: 'brightness(0)' }} />
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+
+        </LayoutGroup>
+      </div>
+
+      {/* ══ Go to home — pinned at bottom ════════════════════════════════════ */}
       <div className="px-[18px] pt-[12px] pb-[48px] shrink-0 bg-[#141523]">
         <motion.button
           className="relative flex items-center justify-center w-full rounded-[6px] px-[16px] py-[12px] font-poppins font-semibold text-[16px] text-white cursor-pointer border-0 outline-none overflow-hidden"

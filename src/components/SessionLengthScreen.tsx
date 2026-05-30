@@ -2,18 +2,16 @@ import { useState, useCallback, useRef } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { ASSETS } from '../assets';
 
-const RECT_265 = '/images/rect-265.svg'; // selected card corner
-const RECT_266 = '/images/rect-266.svg'; // unselected card corner
-const RECT_267 = '/images/rect-267.svg'; // skip button corner
+const RECT_265 = '/images/rect-265.svg';
+const RECT_266 = '/images/rect-266.svg';
+const RECT_267 = '/images/rect-267.svg';
 
-// ── Spring configs ────────────────────────────────────────────────────────────
 const SPRING_SLIDE  = { type: 'spring', stiffness: 340, damping: 28 } as const;
 const SPRING_ENTRY  = { type: 'spring', stiffness: 480, damping: 18 } as const;
 const SPRING_POP    = { type: 'spring', stiffness: 520, damping: 16 } as const;
 const SPRING_ICON   = { type: 'spring', stiffness: 680, damping: 14 } as const;
 const SPRING_CTA    = { type: 'spring', stiffness: 300, damping: 20 } as const;
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 type SessionId = 'quick' | 'medium' | 'long' | 'marathon';
 
 interface SessionOption {
@@ -31,7 +29,6 @@ interface Particle {
   size: number;
 }
 
-// ── Data ──────────────────────────────────────────────────────────────────────
 const OPTIONS: SessionOption[] = [
   { id: 'quick',    icon: ASSETS.acute,       sub: 'Quick win',    name: '5 – 15 min'  },
   { id: 'medium',   icon: ASSETS.timer,       sub: 'Comfortable',  name: '15 – 30 min' },
@@ -39,16 +36,16 @@ const OPTIONS: SessionOption[] = [
   { id: 'marathon', icon: ASSETS.rewardedAds, sub: 'Marathon',     name: '60+ min'     },
 ];
 
-// ── SessionCard sub-component ─────────────────────────────────────────────────
 interface SessionCardProps {
   opt: SessionOption;
   index: number;
   isSelected: boolean;
   anySelected: boolean;
+  isPrevHighlight: boolean;
   onSelect: (id: SessionId, rect: DOMRect) => void;
 }
 
-function SessionCard({ opt, index, isSelected, anySelected, onSelect }: SessionCardProps) {
+function SessionCard({ opt, index, isSelected, anySelected, isPrevHighlight, onSelect }: SessionCardProps) {
   const controls = useAnimation();
   const cardRef  = useRef<HTMLButtonElement>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
@@ -80,6 +77,9 @@ function SessionCard({ opt, index, isSelected, anySelected, onSelect }: SessionC
     });
   }, [anySelected, controls, onSelect, opt.id]);
 
+  const prevHighlightShadow = 'inset 3px 0 0 #00da6b, inset -3px 0 0 #00da6b, 0px -6px 0px 0px #71ffbf, 0px 4px 0px 0px #00984c';
+  const normalShadow = '0px -6px 0px 0px #33334d, 0px 6px 0px 0px #0f0f1a';
+
   return (
     <motion.div
       className="relative"
@@ -89,21 +89,23 @@ function SessionCard({ opt, index, isSelected, anySelected, onSelect }: SessionC
       <motion.button
         ref={cardRef}
         className="relative flex items-center justify-center rounded-[10px] px-[20px] py-[32px] w-full h-full cursor-pointer border-0 outline-none text-left overflow-hidden"
-        style={{ backgroundColor: '#1d1e30', boxShadow: '0px -6px 0px 0px #33334d, 0px 6px 0px 0px #0f0f1a' }}
+        style={{
+          backgroundColor: '#1d1e30',
+          boxShadow: isPrevHighlight ? prevHighlightShadow : normalShadow,
+        }}
         initial={{ opacity: 0, y: 24 }}
         animate={controls}
         onViewportEnter={() =>
           controls.start({
             opacity: 1, y: 0,
             backgroundColor: '#1d1e30',
-            boxShadow: '0px -6px 0px 0px #33334d, 0px 6px 0px 0px #0f0f1a',
+            boxShadow: isPrevHighlight ? prevHighlightShadow : normalShadow,
             transition: { ...SPRING_ENTRY, delay: 0.30 + index * 0.07 },
           })
         }
         transition={{ type: 'spring', stiffness: 380, damping: 22 }}
         onClick={handleSelect}
       >
-        {/* Idle shimmer */}
         {!anySelected && (
           <motion.span aria-hidden
             className="pointer-events-none absolute inset-0 rounded-[10px]"
@@ -114,7 +116,6 @@ function SessionCard({ opt, index, isSelected, anySelected, onSelect }: SessionC
           />
         )}
 
-        {/* Selection shimmer */}
         {isSelected && (
           <motion.span aria-hidden
             className="pointer-events-none absolute inset-0 rounded-[10px]"
@@ -125,7 +126,6 @@ function SessionCard({ opt, index, isSelected, anySelected, onSelect }: SessionC
           />
         )}
 
-        {/* Content */}
         <div className="flex flex-col gap-[10px] items-start justify-center flex-1 min-w-0 relative z-10">
           <motion.div className="shrink-0"
             animate={!anySelected ? { y: [0, -3, 0], scale: [1, 1.06, 1], rotate: 0 } : { y: 0, scale: 1, rotate: 0 }}
@@ -162,7 +162,6 @@ function SessionCard({ opt, index, isSelected, anySelected, onSelect }: SessionC
           </div>
         </div>
 
-        {/* Particles */}
         {particles.map(p => (
           <motion.div key={p.id}
             className="absolute pointer-events-none rounded-full"
@@ -181,7 +180,6 @@ function SessionCard({ opt, index, isSelected, anySelected, onSelect }: SessionC
           />
         ))}
 
-        {/* Corner decoration */}
         <img src={isSelected ? RECT_265 : RECT_266} alt=""
           className="absolute pointer-events-none"
           style={{ top: 4, right: 4, width: 26, height: 20, zIndex: 15 }} />
@@ -190,21 +188,22 @@ function SessionCard({ opt, index, isSelected, anySelected, onSelect }: SessionC
   );
 }
 
-// ── Props ─────────────────────────────────────────────────────────────────────
 export interface SessionLengthBodyProps {
-  onSelect: (rect: DOMRect) => void;
-  onSkip:   () => void;
+  onSelect:    (rect: DOMRect, index: number) => void;
+  onSkip:      () => void;
+  prevAnswer?: number | null;
+  onNext?:     () => void;
 }
 
-// ── Body (used by QuestionFlow) ───────────────────────────────────────────────
-export function SessionLengthBody({ onSelect, onSkip }: SessionLengthBodyProps) {
+export function SessionLengthBody({ onSelect, onSkip, prevAnswer, onNext }: SessionLengthBodyProps) {
   const [selected, setSelected] = useState<SessionId | null>(null);
   const anySelected = selected !== null;
 
   const handleCardSelect = useCallback((id: SessionId, rect: DOMRect) => {
     if (anySelected) return;
+    const index = OPTIONS.findIndex(o => o.id === id);
     setSelected(id);
-    onSelect(rect);
+    onSelect(rect, index);
   }, [anySelected, onSelect]);
 
   return (
@@ -237,14 +236,15 @@ export function SessionLengthBody({ onSelect, onSkip }: SessionLengthBodyProps) 
             index={i}
             isSelected={selected === opt.id}
             anySelected={anySelected}
+            isPrevHighlight={selected === null && prevAnswer === i}
             onSelect={handleCardSelect}
           />
         ))}
       </div>
 
       <motion.div
-        className="flex flex-col items-start justify-end w-full"
-        style={{ height: 112 }}
+        className="flex flex-col items-start justify-end gap-[12px] w-full"
+        style={{ minHeight: 112 }}
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...SPRING_CTA, delay: 0.62 }}
@@ -269,6 +269,33 @@ export function SessionLengthBody({ onSelect, onSkip }: SessionLengthBodyProps) 
             className="absolute pointer-events-none"
             style={{ top: 4, right: 4, width: 26, height: 20 }} />
         </motion.button>
+
+        {onNext && (
+          <motion.button
+            className="relative flex items-center justify-center gap-[10px] rounded-[6px] px-[16px] py-[12px] w-full font-poppins font-bold text-[16px] text-[#141523] cursor-pointer border-0 outline-none overflow-hidden"
+            style={{ backgroundColor: '#00da6b', boxShadow: '0px -6px 0px 0px #71ffbf, 0px 4px 0px 0px #00984c' }}
+            initial={{ opacity: 0, y: 12, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            whileHover={{ scale: 1.015, boxShadow: '0px -6px 0px 0px #71ffbf, 0px 6px 0px 0px #00984c, 0 0 28px rgba(0,218,107,0.55)' }}
+            whileTap={{ scale: 0.965, boxShadow: '0px -2px 0px 0px #71ffbf, 0px 2px 0px 0px #00984c', transition: { duration: 0.07 } }}
+            transition={{ ...SPRING_CTA }}
+            onClick={onNext}
+          >
+            <motion.span aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{ background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.35) 50%, transparent 65%)' }}
+              initial={{ x: '-110%' }}
+              animate={{ x: '210%' }}
+              transition={{ delay: 0.5, duration: 0.9, ease: [0.4, 0, 0.2, 1], repeat: Infinity, repeatDelay: 3.2 }}
+            />
+            Next
+            <img src={ASSETS.arrowForward} alt=""
+              style={{ width: 22, height: 22, filter: 'brightness(0)' }} />
+            <img src={RECT_265} alt=""
+              className="absolute pointer-events-none"
+              style={{ top: 4, right: 4, width: 26, height: 20 }} />
+          </motion.button>
+        )}
       </motion.div>
 
     </div>

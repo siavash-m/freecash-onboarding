@@ -45,10 +45,11 @@ interface PaymentCardProps {
   index: number;
   isSelected: boolean;
   anySelected: boolean;
+  isPrevHighlight: boolean;
   onSelect: (id: PaymentId, rect: DOMRect) => void;
 }
 
-function PaymentCard({ opt, index, isSelected, anySelected, onSelect }: PaymentCardProps) {
+function PaymentCard({ opt, index, isSelected, anySelected, isPrevHighlight, onSelect }: PaymentCardProps) {
   const controls  = useAnimation();
   const cardRef   = useRef<HTMLButtonElement>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
@@ -80,6 +81,9 @@ function PaymentCard({ opt, index, isSelected, anySelected, onSelect }: PaymentC
     });
   }, [anySelected, controls, onSelect, opt.id]);
 
+  const prevHighlightShadow = 'inset 3px 0 0 #00da6b, inset -3px 0 0 #00da6b, 0px -6px 0px 0px #71ffbf, 0px 4px 0px 0px #00984c';
+  const normalShadow = '0px -6px 0px 0px #33334d, 0px 6px 0px 0px #0f0f1a';
+
   return (
     <motion.div
       className="relative"
@@ -89,14 +93,17 @@ function PaymentCard({ opt, index, isSelected, anySelected, onSelect }: PaymentC
       <motion.button
         ref={cardRef}
         className="relative flex items-center justify-center rounded-[10px] px-[20px] py-[32px] w-full h-full cursor-pointer border-0 outline-none text-left overflow-hidden"
-        style={{ backgroundColor: '#1d1e30', boxShadow: '0px -6px 0px 0px #33334d, 0px 6px 0px 0px #0f0f1a' }}
+        style={{
+          backgroundColor: '#1d1e30',
+          boxShadow: isPrevHighlight ? prevHighlightShadow : normalShadow,
+        }}
         initial={{ opacity: 0, y: 24 }}
         animate={controls}
         onViewportEnter={() =>
           controls.start({
             opacity: 1, y: 0,
             backgroundColor: '#1d1e30',
-            boxShadow: '0px -6px 0px 0px #33334d, 0px 6px 0px 0px #0f0f1a',
+            boxShadow: isPrevHighlight ? prevHighlightShadow : normalShadow,
             transition: { ...SPRING_ENTRY, delay: 0.30 + index * 0.07 },
           })
         }
@@ -192,19 +199,22 @@ function PaymentCard({ opt, index, isSelected, anySelected, onSelect }: PaymentC
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 export interface PaymentMethodBodyProps {
-  onSelect: (rect: DOMRect) => void;
-  onSkip:   () => void;
+  onSelect:    (rect: DOMRect, index: number) => void;
+  onSkip:      () => void;
+  prevAnswer?: number | null;
+  onNext?:     () => void;
 }
 
 // ── Body (used by QuestionFlow) ───────────────────────────────────────────────
-export function PaymentMethodBody({ onSelect, onSkip }: PaymentMethodBodyProps) {
+export function PaymentMethodBody({ onSelect, onSkip, prevAnswer, onNext }: PaymentMethodBodyProps) {
   const [selected, setSelected] = useState<PaymentId | null>(null);
   const anySelected = selected !== null;
 
   const handleCardSelect = useCallback((id: PaymentId, rect: DOMRect) => {
     if (anySelected) return;
+    const index = OPTIONS.findIndex(o => o.id === id);
     setSelected(id);
-    onSelect(rect);
+    onSelect(rect, index);
   }, [anySelected, onSelect]);
 
   return (
@@ -237,18 +247,20 @@ export function PaymentMethodBody({ onSelect, onSkip }: PaymentMethodBodyProps) 
             index={i}
             isSelected={selected === opt.id}
             anySelected={anySelected}
+            isPrevHighlight={selected === null && prevAnswer === i}
             onSelect={handleCardSelect}
           />
         ))}
       </div>
 
       <motion.div
-        className="flex flex-col items-start justify-end w-full"
-        style={{ height: 112 }}
+        className="flex flex-col items-start justify-end gap-[12px] w-full"
+        style={{ minHeight: 112 }}
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...SPRING_CTA, delay: 0.62 }}
       >
+        {/* Skip button */}
         <motion.button
           className="relative flex items-center justify-center rounded-[6px] px-[16px] py-[12px] w-full font-poppins font-semibold text-[16px] text-white cursor-pointer border-0 outline-none overflow-hidden"
           style={{ backgroundColor: '#525268', boxShadow: '0px -6px 0px 0px #7d7d9e, 0px 4px 0px 0px #33334d' }}
@@ -269,6 +281,34 @@ export function PaymentMethodBody({ onSelect, onSkip }: PaymentMethodBodyProps) 
             className="absolute pointer-events-none"
             style={{ top: 4, right: 4, width: 26, height: 20 }} />
         </motion.button>
+
+        {/* Next button — only shown when returning to a previously answered step */}
+        {onNext && (
+          <motion.button
+            className="relative flex items-center justify-center gap-[10px] rounded-[6px] px-[16px] py-[12px] w-full font-poppins font-bold text-[16px] text-[#141523] cursor-pointer border-0 outline-none overflow-hidden"
+            style={{ backgroundColor: '#00da6b', boxShadow: '0px -6px 0px 0px #71ffbf, 0px 4px 0px 0px #00984c' }}
+            initial={{ opacity: 0, y: 12, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            whileHover={{ scale: 1.015, boxShadow: '0px -6px 0px 0px #71ffbf, 0px 6px 0px 0px #00984c, 0 0 28px rgba(0,218,107,0.55)' }}
+            whileTap={{ scale: 0.965, boxShadow: '0px -2px 0px 0px #71ffbf, 0px 2px 0px 0px #00984c', transition: { duration: 0.07 } }}
+            transition={{ ...SPRING_CTA }}
+            onClick={onNext}
+          >
+            <motion.span aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{ background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.35) 50%, transparent 65%)' }}
+              initial={{ x: '-110%' }}
+              animate={{ x: '210%' }}
+              transition={{ delay: 0.5, duration: 0.9, ease: [0.4, 0, 0.2, 1], repeat: Infinity, repeatDelay: 3.2 }}
+            />
+            Next
+            <img src={ASSETS.arrowForward} alt=""
+              style={{ width: 22, height: 22, filter: 'brightness(0)' }} />
+            <img src={RECT_265} alt=""
+              className="absolute pointer-events-none"
+              style={{ top: 4, right: 4, width: 26, height: 20 }} />
+          </motion.button>
+        )}
       </motion.div>
 
     </div>

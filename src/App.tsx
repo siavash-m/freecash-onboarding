@@ -9,9 +9,10 @@ type AppScreen = 'onboarding' | 'question' | 'success';
 
 function App() {
   const [screen, setScreen] = useState<AppScreen>('onboarding');
+  const [earnedCents, setEarnedCents] = useState(200);
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
+    <AnimatePresence mode="wait">
       {screen === 'onboarding' && (
         <motion.div
           key="onboarding"
@@ -36,7 +37,7 @@ function App() {
         >
           <QuestionFlow
             onBackToStart={() => setScreen('onboarding')}
-            onDone={() => setScreen('success')}
+            onDone={(cents) => { setEarnedCents(cents); setScreen('success'); }}
           />
         </motion.div>
       )}
@@ -50,7 +51,7 @@ function App() {
           exit={{ opacity: 0 }}
           transition={{ type: 'spring', stiffness: 240, damping: 20 }}
         >
-          <SuccessScreen onGoHome={() => setScreen('onboarding')} />
+          <SuccessScreen earnedCents={earnedCents} onGoHome={() => setScreen('onboarding')} />
         </motion.div>
       )}
     </AnimatePresence>

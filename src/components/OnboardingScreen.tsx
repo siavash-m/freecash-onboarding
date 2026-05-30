@@ -33,9 +33,11 @@ export function OnboardingScreen({ onContinue }: OnboardingScreenProps) {
   return (
     <div
       data-screen="onboarding"
-      className="flex flex-col items-center flex-1 bg-[#141523]"
+      className="flex flex-col flex-1 bg-[#141523]"
+      style={{ height: '100dvh' }}
     >
-      <div className="flex flex-col items-center justify-between flex-1 w-full px-[18px] py-10">
+      {/* ── Scrollable content ── */}
+      <div className="flex flex-col items-center justify-between flex-1 w-full px-[18px] pt-10 pb-4">
 
         {/* ── Header ── */}
         <motion.div
@@ -65,80 +67,76 @@ export function OnboardingScreen({ onContinue }: OnboardingScreenProps) {
         {/* ── Circular goal ── */}
         <CircularGoal />
 
-        {/* ── Bottom section ── */}
+        {/* ── Earning path ── */}
         <motion.div
-          className="flex flex-col gap-10 items-start w-full"
+          className="flex flex-col items-start w-full"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.01, delay: 1.28 }} // reveal container at right time
+          transition={{ duration: 0.01, delay: 1.28 }}
         >
           <EarningPath />
-
-          {/* ── CTA button ── */}
-          <motion.div
-            className="relative w-full"
-            initial={{ opacity: 0, y: 32 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...SPRING_CTA, delay: 1.85 }}
-          >
-            <motion.button
-              data-cta
-              className="relative w-full flex items-center justify-center gap-[10px] rounded-[6px] px-4 py-3 font-poppins font-semibold text-[16px] text-[#141524] whitespace-nowrap cursor-pointer border-0 outline-none overflow-hidden"
-              style={{
-                backgroundColor: '#00da6b',
-                boxShadow: '0px 4px 0px #00984c',
-              }}
-              onClick={onContinue}
-              whileHover={{ scale: 1.015, boxShadow: '0px 4px 0px #00984c, 0 0 24px rgba(0,218,107,0.45)' }}
-              whileTap={{
-                scale: 0.965,
-                boxShadow: '0px 1px 0px #00984c',
-                transition: { duration: 0.06 },
-              }}
-              transition={{ type: 'spring', stiffness: 380, damping: 22 }}
-            >
-              {/* Shimmer sweep — diagonal highlight that repeats every 3.5 s */}
-              <motion.span
-                aria-hidden
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  background:
-                    'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%)',
-                  backgroundSize: '200% 100%',
-                }}
-                initial={{ x: '-110%' }}
-                animate={{ x: '210%' }}
-                transition={{
-                  delay: 2.6,
-                  duration: 1.1,
-                  ease: [0.4, 0, 0.2, 1],
-                  repeat: Infinity,
-                  repeatDelay: 2.2,
-                }}
-              />
-
-              Continue earning
-
-              {/* Arrow bounces rightward on repeat */}
-              <motion.img
-                src={ASSETS.arrowForward}
-                alt=""
-                className="shrink-0"
-                style={{ width: 24, height: 24 }}
-                animate={{ x: [0, 5, 0] }}
-                transition={{
-                  delay: 2.7,
-                  duration: 0.8,
-                  ease: 'easeInOut',
-                  repeat: Infinity,
-                  repeatDelay: 2.2,
-                }}
-              />
-            </motion.button>
-          </motion.div>
         </motion.div>
 
       </div>
+
+      {/* ── CTA pinned at bottom ── */}
+      <div className="px-[18px] pt-[12px] pb-[48px] shrink-0 bg-[#141523]">
+        <motion.button
+          data-cta
+          className="relative w-full flex items-center justify-center gap-[10px] rounded-[6px] px-4 py-3 font-poppins font-bold text-[16px] text-[#141524] whitespace-nowrap cursor-pointer border-0 outline-none overflow-hidden"
+          style={{
+            backgroundColor: '#00da6b',
+            boxShadow: '0px -6px 0px 0px #71ffbf, 0px 4px 0px 0px #00984c',
+          }}
+          initial={{ opacity: 0, y: 32 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...SPRING_CTA, delay: 1.85 }}
+          onClick={onContinue}
+          whileHover={{ scale: 1.015, boxShadow: '0px -6px 0px 0px #71ffbf, 0px 6px 0px 0px #00984c, 0 0 28px rgba(0,218,107,0.55)' }}
+          whileTap={{
+            scale: 0.965,
+            boxShadow: '0px -2px 0px 0px #71ffbf, 0px 2px 0px 0px #00984c',
+            transition: { duration: 0.07 },
+          }}
+        >
+          {/* Shimmer sweep */}
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%)',
+            }}
+            initial={{ x: '-110%' }}
+            animate={{ x: '210%' }}
+            transition={{
+              delay: 2.6,
+              duration: 1.1,
+              ease: [0.4, 0, 0.2, 1],
+              repeat: Infinity,
+              repeatDelay: 2.2,
+            }}
+          />
+
+          Continue earning
+
+          {/* Arrow bounces rightward */}
+          <motion.img
+            src={ASSETS.arrowForward}
+            alt=""
+            className="shrink-0"
+            style={{ width: 24, height: 24, filter: 'brightness(0)' }}
+            animate={{ x: [0, 5, 0] }}
+            transition={{
+              delay: 2.7,
+              duration: 0.8,
+              ease: 'easeInOut',
+              repeat: Infinity,
+              repeatDelay: 2.2,
+            }}
+          />
+        </motion.button>
+      </div>
+
     </div>
   );
 }

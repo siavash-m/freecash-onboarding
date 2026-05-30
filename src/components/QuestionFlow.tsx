@@ -18,11 +18,11 @@ const FILL_BUMP = {
   transition: { duration: 0.50, ease: [0.34, 1.56, 0.64, 1] as number[], times: [0, 0.32, 0.58, 0.80, 1] },
 };
 
-// ── Bar state: 0 = grey, 1 = green, 2 = white ─────────────────────────────────
-// Driven by React state → Framer's direct animate prop (reliable in FM 12).
-const GREY  = 0;
-const GREEN = 1;
-const WHITE = 2;
+// ── Bar states ─────────────────────────────────────────────────────────────────
+const GREY    = 0;
+const GREEN   = 1;
+const WHITE   = 2;
+const SKIPPED = 3;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type QuestionStep = 2 | 3 | 4;
@@ -37,6 +37,16 @@ interface FlyCoin {
   rotations: number;
 }
 interface FlyLabel { src: Pt; dst: Pt }
+
+interface StepperSparkle {
+  id: string;
+  x: number;
+  y: number;
+  dx: number;
+  dy: number;
+  color: string;
+  size: number;
+}
 
 // ── Body slide variants ───────────────────────────────────────────────────────
 const bodyVariants = {
@@ -56,20 +66,22 @@ const bodyVariants = {
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface QuestionFlowProps {
   onBackToStart: () => void;
-  onDone:        () => void;
+  onDone:        (earnedCents: number) => void;
 }
 
 // ── QuestionFlow ──────────────────────────────────────────────────────────────
 export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
   const [step,      setStep]      = useState<QuestionStep>(2);
   const [direction, setDirection] = useState(1);
-  const prevStepRef  = useRef<QuestionStep | null>(null);
-  const navTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevStepRef   = useRef<QuestionStep | null>(null);
+  const navTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Balance ──
-  const balanceRef  = useRef<HTMLDivElement>(null);
+  const balanceRef         = useRef<HTMLDivElement>(null);
   const [balanceCents, setBalanceCents] = useState(200);
+  const latestBalanceCentsRef = useRef(200);
+  useEffect(() => { latestBalanceCentsRef.current = balanceCents; }, [balanceCents]);
   const displayCents = useCountUp(balanceCents, { duration: 1200, from: 200 });
   const badge = useAnimation();
 
@@ -77,28 +89,87 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
   const [coins, setCoins] = useState<FlyCoin[]>([]);
   const [label, setLabel] = useState<FlyLabel | null>(null);
 
+  // ── Stepper sparkles ──────────────────────────────────────────────────────
+  const [stepperSparkles, setStepperSparkles] = useState<StepperSparkle[]>([]);
+  const barRefs = useRef<(HTMLDivElement | null)[]>([null, null, null, null, null]);
+
+  const spawnSparklesForBar = useCallback((barIdx: number) => {
+    const el = barRefs.current[barIdx];
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    setStepperSparkles(prev => [
+      ...prev,
+      ...Array.from({ length: 4 }, (_, i) => ({
+        id:    `sp-${Date.now()}-${barIdx}-${i}`,
+        x:     cx + (Math.random() - 0.5) * rect.width * 0.5,
+        y:     cy,
+        dx:    (Math.random() - 0.5) * 18,
+        dy:    -(14 + Math.random() * 22),
+        color: i % 2 === 0 ? '#1cf192' : '#00da6b',
+        size:  3 + Math.random() * 3,
+      })),
+    ]);
+  }, []);
+
   // ── Stepper bar states ────────────────────────────────────────────────────
-  // [bar0, bar1, bar2, bar3, bar4] — each is GREY | GREEN | WHITE
   const [bars, setBars] = useState<number[]>([GREY, GREY, GREY, GREY, GREY]);
-  // Flag so we know whether a spring bounce (user completed a step) or ease wipe is appropriate
+  const barsRef = useRef<number[]>([GREY, GREY, GREY, GREY, GREY]);
   const initialEntryDoneRef = useRef(false);
-  // Per-bar bump controls — one instance per segment so they never cross-fire
+
   const bump0 = useAnimation(); const bump1 = useAnimation();
   const bump2 = useAnimation(); const bump3 = useAnimation();
   const bump4 = useAnimation();
   const bumpArr = [bump0, bump1, bump2, bump3, bump4];
 
-  const setBar = (i: number, v: number) =>
-    setBars(prev => { const n = [...prev]; n[i] = v; return n; });
+  const setBar = useCallback((i: number, v: number) =>
+    setBars(prev => {
+      const n = [...prev];
+      n[i] = v;
+      barsRef.current = n;
+      return n;
+    }), []);
 
-  // ── Initial entry: bars 0,1 wipe green (with bump), then bar 2 turns white ──
+  // ── Answers tracking (index 0-3 per step, null = unanswered) ─────────────
+  const [answers, setAnswers] = useState<Record<QuestionStep, number | null>>({
+    2: null, 3: null, 4: null,
+  });
+
+  // ── Return-visit tracking — Next button only shown after back navigation ──
+  const [returnVisits, setReturnVisits] = useState<Set<QuestionStep>>(new Set());
+  const clearReturnVisit = useCallback(() => {
+    setReturnVisits(prev => { const n = new Set(prev); n.delete(step); return n; });
+  }, [step]);
+
+  // ── Initial entry: sequential chain — each bar must fully settle before next starts ──
+  // Per-bar activity: fill=360ms, bump=500ms, sparkles=550ms → longest=550ms.
+  // Gap of 650ms between each step gives a 100ms safety buffer after all activity.
   useEffect(() => {
-    const t1 = setTimeout(() => { setBar(0, GREEN); bump0.start(FILL_BUMP); }, 500);
-    const t2 = setTimeout(() => { setBar(1, GREEN); bump1.start(FILL_BUMP); }, 780);
-    const t3 = setTimeout(() => {
-      setBar(2, WHITE);
-      initialEntryDoneRef.current = true;
-    }, 1240);
+    let t1: ReturnType<typeof setTimeout>;
+    let t2: ReturnType<typeof setTimeout>;
+    let t3: ReturnType<typeof setTimeout>;
+
+    t1 = setTimeout(() => {
+      setBar(0, GREEN); bump0.start(FILL_BUMP); spawnSparklesForBar(0);
+
+      // Bar 1 starts only after bar 0 is fully settled (650ms later)
+      t2 = setTimeout(() => {
+        setBar(1, GREEN); bump1.start(FILL_BUMP); spawnSparklesForBar(1);
+
+        // White bar starts only after bar 1 is fully settled (650ms later)
+        t3 = setTimeout(() => {
+          setBar(2, WHITE);
+          spawnSparklesForBar(2);
+          bump2.start({
+            scaleY: [1, 1.10, 0.97, 1.02, 1],
+            transition: { duration: 0.52, ease: [0.34, 1.2, 0.64, 1], times: [0, 0.28, 0.55, 0.78, 1] },
+          });
+          initialEntryDoneRef.current = true;
+        }, 650);
+      }, 650);
+    }, 450);
+
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -106,24 +177,51 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
   useEffect(() => {
     const prev = prevStepRef.current;
     prevStepRef.current = step;
-    if (prev === null) return; // initial entry handled above
+    if (prev === null) return;
 
     if (transTimerRef.current) clearTimeout(transTimerRef.current);
 
     if (step > prev) {
-      // Forward: prev bar white→green (gentle wipe + bump), then new bar grey→white
-      setBar(prev, GREEN);
-      bumpArr[prev].start(FILL_BUMP);
+      // Forward: fill prev bar GREEN — but only if it isn't already SKIPPED
+      if (barsRef.current[prev] !== SKIPPED) {
+        setBar(prev, GREEN);
+        bumpArr[prev].start(FILL_BUMP);
+        spawnSparklesForBar(prev);
+      }
       transTimerRef.current = setTimeout(() => setBar(step, WHITE), 320);
     } else {
-      // Backward: prev bar white→grey; going-back bar green peels off→white
-      setBars(b => { const n = [...b]; n[prev] = GREY; n[step] = GREY; return n; });
+      // Backward: both bars reset; destination becomes WHITE
+      setBars(b => {
+        const n = [...b];
+        n[prev] = GREY;
+        n[step] = GREY;
+        barsRef.current = n;
+        return n;
+      });
       transTimerRef.current = setTimeout(() => setBar(step, WHITE), 80);
     }
   }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Card selection handler ────────────────────────────────────────────────
-  const handleSelect = useCallback((rect: DOMRect) => {
+  const handleSelect = useCallback((rect: DOMRect, index: number) => {
+    const alreadyAnswered = answers[step] !== null;
+    setAnswers(prev => ({ ...prev, [step]: index }));
+    clearReturnVisit();
+
+    if (alreadyAnswered) {
+      // Re-selection on a return visit: no coins, no balance change — just navigate
+      navTimerRef.current = setTimeout(() => {
+        setDirection(1);
+        setStep(s => {
+          if (s < 4) return (s + 1) as QuestionStep;
+          onDone(latestBalanceCentsRef.current);
+          return s;
+        });
+      }, 600);
+      return;
+    }
+
+    // Fresh selection: coin animation + balance increment
     const b = balanceRef.current!.getBoundingClientRect();
     const src: Pt = { x: rect.left + rect.width  / 2, y: rect.top  + rect.height / 2 };
     const dst: Pt = { x: b.left   + b.width  / 2,    y: b.top   + b.height / 2 };
@@ -154,22 +252,39 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
       setDirection(1);
       setStep(s => {
         if (s < 4) return (s + 1) as QuestionStep;
-        onDone();
+        onDone(latestBalanceCentsRef.current);
         return s;
       });
     }, 1500);
-  }, [badge, onDone]);
+  }, [answers, step, badge, onDone]);
 
   const handleSkip = useCallback(() => {
     if (navTimerRef.current) clearTimeout(navTimerRef.current);
-    if (step === 4) { onDone(); return; }
+    clearReturnVisit();
+    setBar(step, SKIPPED);
+    if (step === 4) { onDone(latestBalanceCentsRef.current); return; }
     setDirection(1);
     setStep(s => (s < 4 ? (s + 1) as QuestionStep : 4));
-  }, [step, onDone]);
+  }, [step, onDone, setBar, clearReturnVisit]);
+
+  // Navigate forward with existing answer (no balance change)
+  const handleNext = useCallback(() => {
+    if (navTimerRef.current) clearTimeout(navTimerRef.current);
+    clearReturnVisit();
+    setDirection(1);
+    setStep(s => {
+      if (s < 4) return (s + 1) as QuestionStep;
+      onDone(latestBalanceCentsRef.current);
+      return s;
+    });
+  }, [onDone, clearReturnVisit]);
 
   const handleBack = useCallback(() => {
     if (navTimerRef.current) clearTimeout(navTimerRef.current);
     if (step === 2) { onBackToStart(); return; }
+    // Mark the destination step as a return visit so the Next button shows
+    const destStep = (step - 1) as QuestionStep;
+    setReturnVisits(prev => new Set([...prev, destStep]));
     setDirection(-1);
     setStep(s => (s > 2 ? (s - 1) as QuestionStep : 2));
   }, [step, onBackToStart]);
@@ -177,7 +292,7 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
   return (
     <div className="flex flex-col flex-1 bg-[#141523]">
 
-      {/* ══ Persistent header (never remounts across steps 2–4) ═════════════ */}
+      {/* ══ Persistent header ═══════════════════════════════════════════════ */}
       <motion.div
         className="flex flex-col gap-[14px] items-center bg-[#1d1e30] px-[24px] pt-[48px] pb-[24px] shrink-0 w-full"
         initial={{ y: -60, opacity: 0 }}
@@ -200,7 +315,7 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
                 onClick={handleBack}
               >
                 <img src={ASSETS.arrowForward} alt="Back" className="block"
-                  style={{ width: 24, height: 24, transform: 'rotate(180deg)', filter: 'brightness(0) invert(1)' }} />
+                  style={{ width: 24, height: 24, flexShrink: 0, transform: 'rotate(180deg)', filter: 'brightness(0) invert(1)' }} />
               </motion.button>
             )}
           </div>
@@ -214,13 +329,12 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
           >
             <motion.div
               className="flex items-center justify-center shrink-0"
-              style={{ width: 43, height: 34 }}
+              style={{ width: 28, height: 28 }}
               initial={{ rotate: -90, opacity: 0 }}
               animate={{ rotate: 10.03, opacity: 1 }}
               transition={{ ...SPRING_POP, delay: 0.18 }}
             >
-              {/* SVG has preserveAspectRatio="none" with a square viewBox — render square */}
-              <img src={GROUP_836} alt="" style={{ width: 28, height: 28, display: 'block' }} />
+              <img src={GROUP_836} alt="" style={{ width: 28, height: 28, display: 'block', flexShrink: 0 }} />
             </motion.div>
             <div className="flex flex-col items-start leading-normal">
               <span className="font-poppins font-black text-[10px] text-[#71ffbf] uppercase whitespace-nowrap"
@@ -237,7 +351,7 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
           <div className="flex flex-1 min-w-0" />
         </div>
 
-        {/* Progress bar — state-driven, no full reset between steps */}
+        {/* Progress bar */}
         <div className="flex flex-col gap-[2px] w-full">
           <div className="flex items-center justify-between w-full">
             <span className="font-poppins font-black text-[14px] text-white tracking-[0.42px]"
@@ -252,14 +366,17 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
             transition={{ delay: 0.20, duration: 0.26, ease: [0.4, 0, 0.2, 1] }}
           >
             {bars.map((barState, i) => (
-              <motion.div key={i} className="flex-1 h-full min-w-0 relative"
+              <motion.div
+                key={i}
+                className="flex-1 h-full min-w-0 relative"
                 style={{ transformOrigin: 'center' }}
-                animate={bumpArr[i]}>
-
-                {/* Base: dark grey pill (unvisited) */}
+                animate={bumpArr[i]}
+                ref={(el: HTMLDivElement | null) => { barRefs.current[i] = el; }}
+              >
+                {/* Base: dark grey pill */}
                 <div className="absolute inset-0 rounded-[100px]" style={{ backgroundColor: '#33334d' }} />
 
-                {/* Green 3-layer pill — scaleX wipe from left */}
+                {/* Green 3-layer pill — liquid scaleX wipe from left */}
                 <motion.div
                   className="absolute inset-0"
                   style={{ transformOrigin: 'left center' }}
@@ -267,9 +384,9 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
                   animate={{ scaleX: barState === GREEN ? 1 : 0 }}
                   transition={
                     barState === GREEN && initialEntryDoneRef.current
-                      ? { duration: 0.55, ease: [0.22, 1, 0.36, 1] }
+                      ? { duration: 0.55, ease: [0.12, 0.8, 0.2, 1] }
                       : barState === GREEN
-                      ? { duration: 0.36, ease: [0.4, 0, 0.2, 1] }
+                      ? { duration: 0.36, ease: [0.12, 0.8, 0.2, 1] }
                       : { duration: 0.28, ease: [0.4, 0, 0.2, 1] }
                   }
                 >
@@ -283,12 +400,17 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
                       borderRadius: '300px 300px 50px 50px' }} />
                 </motion.div>
 
-                {/* Grey/white 3-layer pill — current step indicator */}
+                {/* White pill — wipes in left→right, same feel as green */}
                 <motion.div
                   className="absolute inset-0"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: barState === WHITE ? 1 : 0 }}
-                  transition={{ duration: 0.26, ease: [0.4, 0, 0.2, 1] }}
+                  style={{ transformOrigin: 'left center' }}
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: barState === WHITE ? 1 : 0 }}
+                  transition={
+                    barState === WHITE
+                      ? { duration: 0.42, ease: [0.22, 1, 0.36, 1] }
+                      : { duration: 0.20, ease: [0.4, 0, 0.2, 1] }
+                  }
                 >
                   <div className="absolute inset-0 rounded-[100px]" style={{ backgroundColor: '#cbcbde' }} />
                   <div className="absolute"
@@ -297,6 +419,17 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
                   <div className="absolute"
                     style={{ left: 2, right: 2, top: 1.55, bottom: 4.45, backgroundColor: '#ffffff',
                       borderRadius: '300px 300px 50px 50px' }} />
+                </motion.div>
+
+                {/* Skipped pill — muted lavender with inset border */}
+                <motion.div
+                  className="absolute inset-0"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: barState === SKIPPED ? 1 : 0 }}
+                  transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                >
+                  <div className="absolute inset-0 rounded-[100px]"
+                    style={{ backgroundColor: '#7d7d9e', boxShadow: 'inset 0 0 0 2px #1d1e30' }} />
                 </motion.div>
               </motion.div>
             ))}
@@ -316,14 +449,35 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
             exit="exit"
             className="absolute inset-0 flex flex-col"
           >
-            {step === 2 && <PaymentMethodBody onSelect={handleSelect} onSkip={handleSkip} />}
-            {step === 3 && <GameGenreBody     onSelect={handleSelect} onSkip={handleSkip} />}
-            {step === 4 && <SessionLengthBody onSelect={handleSelect} onSkip={handleSkip} />}
+            {step === 2 && (
+              <PaymentMethodBody
+                onSelect={handleSelect}
+                onSkip={handleSkip}
+                prevAnswer={answers[2]}
+                onNext={returnVisits.has(2) && answers[2] !== null ? handleNext : undefined}
+              />
+            )}
+            {step === 3 && (
+              <GameGenreBody
+                onSelect={handleSelect}
+                onSkip={handleSkip}
+                prevAnswer={answers[3]}
+                onNext={returnVisits.has(3) && answers[3] !== null ? handleNext : undefined}
+              />
+            )}
+            {step === 4 && (
+              <SessionLengthBody
+                onSelect={handleSelect}
+                onSkip={handleSkip}
+                prevAnswer={answers[4]}
+                onNext={returnVisits.has(4) && answers[4] !== null ? handleNext : undefined}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* ══ Flying reward overlay ════════════════════════════════════════════ */}
+      {/* ══ Flying reward + sparkle overlay ════════════════════════════════ */}
       <div className="fixed inset-0 pointer-events-none z-[60]">
 
         {coins.map(c => (
@@ -368,6 +522,22 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
             onAnimationComplete={() => setLabel(null)}
           >+$1.00</motion.span>
         )}
+
+        {/* Stepper sparkles */}
+        {stepperSparkles.map(s => (
+          <motion.div key={s.id}
+            className="absolute pointer-events-none rounded-full"
+            style={{
+              width: s.size, height: s.size,
+              left: s.x - s.size / 2, top: s.y - s.size / 2,
+              backgroundColor: s.color,
+              boxShadow: `0 0 6px ${s.color}`,
+            }}
+            animate={{ x: s.dx, y: s.dy, opacity: 0, scale: 0.2 }}
+            transition={{ duration: 0.55, ease: [0.2, 0, 0.8, 1] }}
+            onAnimationComplete={() => setStepperSparkles(p => p.filter(x => x.id !== s.id))}
+          />
+        ))}
 
       </div>
     </div>

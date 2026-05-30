@@ -107,11 +107,14 @@ function randomChipData(): { avatar: string; amount: string; label: string } {
 }
 
 // ── Chip positions ────────────────────────────────────────────────────────────
+// Right chips: left=196 → right edge 320px (within 322px container).
+// Left chips: left=-36 → right edge 88px; screen left ≈18px with typical viewport padding.
+// Vertical spacing ≥177px per side to prevent float-drift overlap.
 const CHIP_POSITIONS = [
-  { left: 203.6,  top: 42.69,  avatarOnLeft: true,  floatClass: 'chip-float-1', liveClass: 'chip-live-1' },
-  { left: 216.74, top: 197.03, avatarOnLeft: true,  floatClass: 'chip-float-2', liveClass: 'chip-live-2' },
-  { left: -41.87, top: 74.71,  avatarOnLeft: false, floatClass: 'chip-float-3', liveClass: 'chip-live-3' },
-  { left: 15.6,   top: 243.01, avatarOnLeft: false, floatClass: 'chip-float-4', liveClass: 'chip-live-4' },
+  { left: 196,  top: 28,  avatarOnLeft: true,  floatClass: 'chip-float-1', liveClass: 'chip-live-1' },
+  { left: 196,  top: 205, avatarOnLeft: true,  floatClass: 'chip-float-2', liveClass: 'chip-live-2' },
+  { left: -36,  top: 75,  avatarOnLeft: false, floatClass: 'chip-float-3', liveClass: 'chip-live-3' },
+  { left: -20,  top: 238, avatarOnLeft: false, floatClass: 'chip-float-4', liveClass: 'chip-live-4' },
 ];
 
 const CHIP_W = 124;
@@ -260,17 +263,25 @@ export function CircularGoal() {
     const pos = CHIP_POSITIONS[posIdx];
     const cx  = pos.left + CHIP_W / 2;
     const cy  = pos.top  + CHIP_H / 2;
+    const BURST_COLORS = ['#ffffff', '#1cf192', '#00da6b', '#fee810', '#71ffbf'];
     setParticles(prev => [
       ...prev,
-      ...Array.from({ length: 8 }, (_, i) => ({
+      ...Array.from({ length: 16 }, (_, i) => ({
         id:       `p${Date.now()}-${i}`,
-        left: cx, top: cy,
-        angle:    (i / 8) * Math.PI * 2 + (Math.random() - 0.5) * 0.7,
-        distance: 32 + Math.random() * 28,
-        color:    i % 3 === 0 ? '#ffffff' : '#00da6b',
-        size:     3  + Math.random() * 5,
+        left:     cx + (Math.random() - 0.5) * 10,
+        top:      cy + (Math.random() - 0.5) * 6,
+        angle:    (i / 16) * Math.PI * 2 + (Math.random() - 0.5) * 0.6,
+        distance: 40 + Math.random() * 50 + (i < 3 ? 30 : 0), // 3 "big" particles fly extra far
+        color:    BURST_COLORS[i % BURST_COLORS.length],
+        size:     i < 3 ? 8 + Math.random() * 4 : 3 + Math.random() * 4,
       })),
     ]);
+
+    // Brief scale-pulse on the whole chart to sell the impact
+    celebrateRef.current.start({
+      scale: [1, 1.08, 0.96, 1],
+      transition: { duration: 0.35, ease: 'easeOut' },
+    });
 
     setActiveChips(prev => prev.filter(c => c.id !== id));
 
@@ -393,79 +404,58 @@ export function CircularGoal() {
       </motion.svg>
 
       {/* ── Orbiting glow dots ────────────────────────────────────────────────
-           Three dots orbit at different radii + directions.
-           Each pivot div is 0×0 at the container center; rotation makes the
-           child dot orbit. The child fades in after the arc finishes drawing.
+           Full-container pivot divs with explicit transformOrigin at center.
+           CSS keyframe rotation is used for rock-solid continuous spinning in
+           all FM versions. Dots fade in via CSS animation-delay.
       ─────────────────────────────────────────────────────────────────────── */}
 
       {/* Dot 1 — bright green, inner orbit (r ≈ 91), clockwise 9 s */}
-      <motion.div
-        className="absolute pointer-events-none"
-        style={{ left: ARC_CX, top: ARC_CY, width: 0, height: 0, zIndex: 6 }}
-        animate={{ rotate: [0, 360] }}
-        transition={{ duration: 9, repeat: Infinity, ease: 'linear' }}
+      <div
+        className="absolute pointer-events-none orbit-cw-9"
+        style={{ left: 0, top: 0, width: CONTAINER_W, height: CONTAINER_H,
+          transformOrigin: `${ARC_CX}px ${ARC_CY}px`, zIndex: 6 }}
       >
-        <motion.div
-          style={{
-            position: 'absolute', width: 6, height: 6, borderRadius: '50%',
-            backgroundColor: '#00da6b',
-            boxShadow: '0 0 10px 2px rgba(0,218,107,0.95)',
-            left: 88, top: -3,
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2.3, duration: 0.6 }}
-        />
-      </motion.div>
+        <div className="dot-fade-2300" style={{
+          position: 'absolute', width: 6, height: 6, borderRadius: '50%',
+          backgroundColor: '#00da6b',
+          boxShadow: '0 0 10px 2px rgba(0,218,107,0.95)',
+          left: ARC_CX + 88 - 3, top: ARC_CY - 3,
+        }} />
+      </div>
 
       {/* Dot 2 — white, mid orbit (r ≈ 113), counter-clockwise 16 s */}
-      <motion.div
-        className="absolute pointer-events-none"
-        style={{ left: ARC_CX, top: ARC_CY, width: 0, height: 0, zIndex: 6 }}
-        animate={{ rotate: [0, -360] }}
-        transition={{ duration: 16, repeat: Infinity, ease: 'linear' }}
+      <div
+        className="absolute pointer-events-none orbit-ccw-16"
+        style={{ left: 0, top: 0, width: CONTAINER_W, height: CONTAINER_H,
+          transformOrigin: `${ARC_CX}px ${ARC_CY}px`, zIndex: 6 }}
       >
-        <motion.div
-          style={{
-            position: 'absolute', width: 4.5, height: 4.5, borderRadius: '50%',
-            backgroundColor: '#ffffff',
-            boxShadow: '0 0 8px rgba(255,255,255,1)',
-            left: 110.75, top: -2.25,
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.9 }}
-          transition={{ delay: 2.7, duration: 0.7 }}
-        />
-      </motion.div>
+        <div className="dot-fade-2700" style={{
+          position: 'absolute', width: 4.5, height: 4.5, borderRadius: '50%',
+          backgroundColor: '#ffffff',
+          boxShadow: '0 0 8px rgba(255,255,255,1)',
+          left: ARC_CX + 110.75 - 2.25, top: ARC_CY - 2.25,
+        }} />
+      </div>
 
       {/* Dot 3 — dim green, outer orbit (r ≈ 128), clockwise 24 s */}
-      <motion.div
-        className="absolute pointer-events-none"
-        style={{ left: ARC_CX, top: ARC_CY, width: 0, height: 0, zIndex: 5 }}
-        animate={{ rotate: [0, 360] }}
-        transition={{ duration: 24, repeat: Infinity, ease: 'linear' }}
+      <div
+        className="absolute pointer-events-none orbit-cw-24"
+        style={{ left: 0, top: 0, width: CONTAINER_W, height: CONTAINER_H,
+          transformOrigin: `${ARC_CX}px ${ARC_CY}px`, zIndex: 5 }}
       >
-        <motion.div
-          style={{
-            position: 'absolute', width: 3.5, height: 3.5, borderRadius: '50%',
-            backgroundColor: '#00da6b', opacity: 0.7,
-            boxShadow: '0 0 7px rgba(0,218,107,0.8)',
-            left: 126.25, top: -1.75,
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.7 }}
-          transition={{ delay: 3.1, duration: 0.8 }}
-        />
-      </motion.div>
+        <div className="dot-fade-3100" style={{
+          position: 'absolute', width: 3.5, height: 3.5, borderRadius: '50%',
+          backgroundColor: '#00da6b',
+          boxShadow: '0 0 7px rgba(0,218,107,0.8)',
+          left: ARC_CX + 126.25 - 1.75, top: ARC_CY - 1.75,
+        }} />
+      </div>
 
-      {/* ── Comet sweep — bright head with fading tail, orbits the inner ring
-           every ~12 s with a 7 s pause between sweeps.
-           Tail extends in the backward-tangential direction (top: negative in
-           local space = trailing edge for clockwise orbit).
-      ── */}
+      {/* ── Comet sweep — bright head with fading tail ── */}
       <motion.div
         className="absolute pointer-events-none"
-        style={{ left: ARC_CX, top: ARC_CY, width: 0, height: 0, zIndex: 7 }}
+        style={{ left: 0, top: 0, width: CONTAINER_W, height: CONTAINER_H,
+          transformOrigin: `${ARC_CX}px ${ARC_CY}px`, zIndex: 7 }}
         animate={{ rotate: [0, 360] }}
         transition={{
           delay:       4.8,
@@ -475,42 +465,26 @@ export function CircularGoal() {
           ease:        [0.3, 0, 0.7, 1],
         }}
       >
-        {/* Comet head */}
         <motion.div
           style={{
             position: 'absolute', width: 8, height: 8, borderRadius: '50%',
             backgroundColor: '#ffffff',
-            boxShadow:
-              '0 0 12px 3px rgba(255,255,255,1), 0 0 24px rgba(0,218,107,0.7)',
-            left: 87, top: -4,
+            boxShadow: '0 0 12px 3px rgba(255,255,255,1), 0 0 24px rgba(0,218,107,0.7)',
+            left: ARC_CX + 87 - 4, top: ARC_CY - 4,
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: [0, 0, 1, 1, 0] }}
-          transition={{
-            delay:       4.8,
-            duration:    2.2,
-            repeat:      Infinity,
-            repeatDelay: 6.5,
-            times:       [0, 0.04, 0.1, 0.9, 1],
-          }}
+          transition={{ delay: 4.8, duration: 2.2, repeat: Infinity, repeatDelay: 6.5, times: [0, 0.04, 0.1, 0.9, 1] }}
         />
-        {/* Comet tail — extends toward negative-y (backward along clockwise orbit) */}
         <motion.div
           style={{
             position: 'absolute', width: 2, height: 30, borderRadius: 1,
-            background:
-              'linear-gradient(to bottom, transparent 0%, rgba(0,218,107,0.25) 50%, rgba(255,255,255,0.6) 100%)',
-            left: 90, top: -4 - 30,
+            background: 'linear-gradient(to bottom, transparent 0%, rgba(0,218,107,0.25) 50%, rgba(255,255,255,0.6) 100%)',
+            left: ARC_CX + 90 - 1, top: ARC_CY - 4 - 30,
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: [0, 0, 0.9, 0.9, 0] }}
-          transition={{
-            delay:       4.8,
-            duration:    2.2,
-            repeat:      Infinity,
-            repeatDelay: 6.5,
-            times:       [0, 0.04, 0.1, 0.9, 1],
-          }}
+          transition={{ delay: 4.8, duration: 2.2, repeat: Infinity, repeatDelay: 6.5, times: [0, 0.04, 0.1, 0.9, 1] }}
         />
       </motion.div>
 
@@ -546,11 +520,11 @@ export function CircularGoal() {
         />
       ))}
 
-      {/* ── Center text ── */}
+      {/* ── Center text — z-index above orbiting dot layers (5, 6) ── */}
       <motion.div
         data-center-text
         className="absolute flex flex-col items-center font-poppins font-bold pointer-events-none"
-        style={{ left: '50%', top: '50%', x: '-50%', y: '-50%' }}
+        style={{ left: '50%', top: '50%', x: '-50%', y: '-50%', zIndex: 20 }}
         initial={{ opacity: 0, scale: 0.6 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ ...SPRING_BOUNCE, delay: 1.0 }}
@@ -581,13 +555,15 @@ export function CircularGoal() {
             width: p.size, height: p.size,
             left: p.left - p.size / 2, top: p.top - p.size / 2,
             backgroundColor: p.color,
-            boxShadow: p.color === '#00da6b'
+            boxShadow: p.color === '#fee810'
+              ? '0 0 9px rgba(254,232,16,0.95)'
+              : p.color === '#1cf192' || p.color === '#71ffbf' || p.color === '#00da6b'
               ? '0 0 7px rgba(0,218,107,0.95)' : '0 0 6px rgba(255,255,255,0.9)',
             zIndex: 30,
           }}
           initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
           animate={{ x: Math.cos(p.angle)*p.distance, y: Math.sin(p.angle)*p.distance, opacity: 0, scale: 0.1 }}
-          transition={{ duration: 0.52, ease: [0.2, 0, 0.8, 1] }}
+          transition={{ duration: 0.45, ease: [0.15, 0, 0.8, 1] }}
           onAnimationComplete={() => setParticles(prev => prev.filter(pp => pp.id !== p.id))}
         />
       ))}

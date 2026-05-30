@@ -141,3 +141,27 @@ p { margin: 0; }
 .chip-glow-2 { animation: chipGlowPulse 3.3s ease-in-out 3.1s infinite; }
 .chip-glow-3 { animation: chipGlowPulse 2.5s ease-in-out 1.9s infinite; }
 .chip-glow-4 { animation: chipGlowPulse 3.7s ease-in-out 3.8s infinite; }
+
+/* ─────────────────────────────────────────
+   Orbiting dot rotation — reliable CSS keyframes
+   used instead of Framer Motion to avoid FM v12
+   transform-origin issues on 0×0 pivot elements.
+───────────────────────────────────────── */
+@keyframes orbitCW  { to { transform: rotate(360deg);  } }
+@keyframes orbitCCW { to { transform: rotate(-360deg); } }
+
+.orbit-cw-9   { animation: orbitCW   9s  linear infinite; }
+.orbit-ccw-16 { animation: orbitCCW 16s  linear infinite; }
+.orbit-cw-24  { animation: orbitCW  24s  linear infinite; }
+
+/* Dot fade-in — each dot appears after the arc finishes drawing */
+@keyframes dotFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.dot-fade-2300 { opacity: 0; animation: dotFadeIn 0.6s ease forwards; animation-delay: 2.3s; }
+.dot-fade-2700 { opacity: 0; animation: dotFadeIn 0.7s ease forwards 2.7s; }
+.dot-fade-3100 { opacity: 0; animation: dotFadeIn 0.8s ease forwards 3.1s; }
+
+/* Yellow dot fade-in for SuccessScreen chart */
+.dot-fade-y-1800 { opacity: 0; animation: dotFadeIn 0.5s ease forwards 1.8s; }
+.dot-fade-y-2000 { opacity: 0; animation: dotFadeIn 0.5s ease forwards 2.0s; }
+.dot-fade-y-2200 { opacity: 0; animation: dotFadeIn 0.5s ease forwards 2.2s; }
