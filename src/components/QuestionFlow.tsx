@@ -470,7 +470,7 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
       <div className="fixed inset-0 pointer-events-none z-[60]">
 
         {coins.map(c => (
-          <motion.img key={c.id} src={ASSETS.paidIcon} alt="" className="absolute"
+          <motion.img key={c.id} src={GROUP_836} alt="" className="absolute"
             style={{ width: 26, height: 26, left: 0, top: 0 }}
             initial={{ x: c.src.x - 13, y: c.src.y - 13, scale: 0.45, opacity: 0 }}
             animate={{
