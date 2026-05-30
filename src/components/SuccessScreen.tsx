@@ -288,18 +288,28 @@ export function SuccessScreen({ onGoHome, earnedCents }: SuccessScreenProps) {
               <div className="flex flex-col gap-2 flex-1 min-w-0">
                 {PATH_STEPS.map((step, i) => (
                   <motion.div key={step.label}
-                    className="flex items-center w-full rounded-[8px] px-5 py-3 gap-[10px]"
+                    className="relative flex items-center w-full rounded-[8px] px-5 py-3 gap-[10px]"
                     style={{ backgroundColor: '#141523', borderWidth: 1, borderStyle: 'solid', borderColor: '#525268' }}
-                    initial={{ opacity: 0, y: -12, borderColor: '#525268' }}
-                    animate={{ opacity: 1, y: 0, borderColor: step.borderColor }}
+                    initial={{ opacity: 0, y: -12 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{
-                      opacity:     { ...SPRING_SLIDE, delay: 1.02 + i * 0.15 },
-                      y:           { ...SPRING_SLIDE, delay: 1.02 + i * 0.15 },
-                      borderColor: { delay: 1.40 + i * 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+                      opacity: { ...SPRING_SLIDE, delay: 1.02 + i * 0.15 },
+                      y:       { ...SPRING_SLIDE, delay: 1.02 + i * 0.15 },
                     }}
                   >
-                    <span className="flex-1 font-poppins font-medium text-[14px] text-white leading-normal min-w-0">{step.label}</span>
-                    <motion.span className="font-poppins font-bold text-[14px] whitespace-nowrap leading-normal shrink-0"
+                    {/* Coloured border draws in top-to-bottom for green (i=0) and yellow (i=1) */}
+                    {step.borderColor !== '#525268' && (
+                      <motion.div
+                        className="absolute inset-0 rounded-[8px] pointer-events-none"
+                        style={{ border: `1px solid ${step.borderColor}` }}
+                        initial={{ clipPath: 'inset(0 0 100% 0 round 8px)' }}
+                        animate={{ clipPath: 'inset(0 0 0% 0 round 8px)' }}
+                        transition={{ delay: 1.40 + i * 0.35, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                      />
+                    )}
+
+                    <span className="relative z-[1] flex-1 font-poppins font-medium text-[14px] text-white leading-normal min-w-0">{step.label}</span>
+                    <motion.span className="relative z-[1] font-poppins font-bold text-[14px] whitespace-nowrap leading-normal shrink-0"
                       style={{ color: step.amountColor }}
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                       transition={{ delay: 1.48 + i * 0.15, duration: 0.3 }}>

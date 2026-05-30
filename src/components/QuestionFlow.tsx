@@ -93,7 +93,7 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
   const [stepperSparkles, setStepperSparkles] = useState<StepperSparkle[]>([]);
   const barRefs = useRef<(HTMLDivElement | null)[]>([null, null, null, null, null]);
 
-  const spawnSparklesForBar = useCallback((barIdx: number) => {
+  const spawnSparklesForBar = useCallback((barIdx: number, white = false) => {
     const el = barRefs.current[barIdx];
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -107,7 +107,9 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
         y:     cy,
         dx:    (Math.random() - 0.5) * 18,
         dy:    -(14 + Math.random() * 22),
-        color: i % 2 === 0 ? '#1cf192' : '#00da6b',
+        color: white
+          ? (i % 2 === 0 ? '#ffffff' : '#cbcbde')
+          : (i % 2 === 0 ? '#1cf192' : '#00da6b'),
         size:  3 + Math.random() * 3,
       })),
     ]);
@@ -142,34 +144,20 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
     setReturnVisits(prev => { const n = new Set(prev); n.delete(step); return n; });
   }, [step]);
 
-  // ── Initial entry: sequential chain — each bar must fully settle before next starts ──
-  // Per-bar activity: fill=360ms, bump=500ms, sparkles=550ms → longest=550ms.
-  // Gap of 650ms between each step gives a 100ms safety buffer after all activity.
+  // ── Initial entry: fast cascading fill — bars overlap slightly for a fluid feel ──
+  // 140ms stagger so each bar starts while the previous is still wiping in.
   useEffect(() => {
-    let t1: ReturnType<typeof setTimeout>;
-    let t2: ReturnType<typeof setTimeout>;
-    let t3: ReturnType<typeof setTimeout>;
-
-    t1 = setTimeout(() => {
-      setBar(0, GREEN); bump0.start(FILL_BUMP); spawnSparklesForBar(0);
-
-      // Bar 1 starts only after bar 0 is fully settled (650ms later)
-      t2 = setTimeout(() => {
-        setBar(1, GREEN); bump1.start(FILL_BUMP); spawnSparklesForBar(1);
-
-        // White bar starts only after bar 1 is fully settled (650ms later)
-        t3 = setTimeout(() => {
-          setBar(2, WHITE);
-          spawnSparklesForBar(2);
-          bump2.start({
-            scaleY: [1, 1.10, 0.97, 1.02, 1],
-            transition: { duration: 0.52, ease: [0.34, 1.2, 0.64, 1], times: [0, 0.28, 0.55, 0.78, 1] },
-          });
-          initialEntryDoneRef.current = true;
-        }, 650);
-      }, 650);
-    }, 450);
-
+    const t1 = setTimeout(() => { setBar(0, GREEN); bump0.start(FILL_BUMP); spawnSparklesForBar(0); }, 180);
+    const t2 = setTimeout(() => { setBar(1, GREEN); bump1.start(FILL_BUMP); spawnSparklesForBar(1); }, 320);
+    const t3 = setTimeout(() => {
+      setBar(2, WHITE);
+      spawnSparklesForBar(2, true);
+      bump2.start({
+        scaleY: [1, 1.10, 0.97, 1.02, 1],
+        transition: { duration: 0.52, ease: [0.34, 1.2, 0.64, 1], times: [0, 0.28, 0.55, 0.78, 1] },
+      });
+      initialEntryDoneRef.current = true;
+    }, 460);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -189,7 +177,7 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
         spawnSparklesForBar(prev);
       }
       transTimerRef.current = setTimeout(() => setBar(step, WHITE), 320);
-    } else {
+    } else if (step < prev) {
       // Backward: both bars reset; destination becomes WHITE
       setBars(b => {
         const n = [...b];
@@ -200,6 +188,7 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
       });
       transTimerRef.current = setTimeout(() => setBar(step, WHITE), 80);
     }
+    // step === prev → no-op (guards against React Strict Mode double-fire)
   }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Card selection handler ────────────────────────────────────────────────
@@ -384,10 +373,10 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
                   animate={{ scaleX: barState === GREEN ? 1 : 0 }}
                   transition={
                     barState === GREEN && initialEntryDoneRef.current
-                      ? { duration: 0.55, ease: [0.12, 0.8, 0.2, 1] }
+                      ? { duration: 0.32, ease: [0.12, 0.8, 0.2, 1] }
                       : barState === GREEN
-                      ? { duration: 0.36, ease: [0.12, 0.8, 0.2, 1] }
-                      : { duration: 0.28, ease: [0.4, 0, 0.2, 1] }
+                      ? { duration: 0.22, ease: [0.12, 0.8, 0.2, 1] }
+                      : { duration: 0.18, ease: [0.4, 0, 0.2, 1] }
                   }
                 >
                   <div className="absolute inset-0 rounded-[100px]"
@@ -400,15 +389,15 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
                       borderRadius: '300px 300px 50px 50px' }} />
                 </motion.div>
 
-                {/* White pill — wipes in left→right, same feel as green */}
+                {/* White pill — wipes in L→R (left origin) and off L→R (right origin on exit) */}
                 <motion.div
                   className="absolute inset-0"
-                  style={{ transformOrigin: 'left center' }}
+                  style={{ transformOrigin: barState === WHITE ? 'left center' : 'right center' }}
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: barState === WHITE ? 1 : 0 }}
                   transition={
                     barState === WHITE
-                      ? { duration: 0.42, ease: [0.22, 1, 0.36, 1] }
+                      ? { duration: 0.26, ease: [0.22, 1, 0.36, 1] }
                       : { duration: 0.20, ease: [0.4, 0, 0.2, 1] }
                   }
                 >
