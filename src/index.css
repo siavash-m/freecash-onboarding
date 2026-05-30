@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background-color: #141523;
+  display: flex;
+  justify-content: center;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+p { margin: 0; }
+
+/* ─────────────────────────────────────────
+   Ring sonar pulse
+───────────────────────────────────────── */
+@keyframes ringPulse {
+  0%, 100% { transform: scale(1);    opacity: 1;    }
+  50%       { transform: scale(1.06); opacity: 0.68; }
+}
+.ring-pulse-a { animation: ringPulse 2.0s ease-in-out 1.4s infinite; }
+.ring-pulse-b { animation: ringPulse 2.0s ease-in-out 1.7s infinite; }
+.ring-pulse-c { animation: ringPulse 2.0s ease-in-out 2.0s infinite; }
+
+/* ─────────────────────────────────────────
+   Chip float — gentle 2-D organic drift
+   (translate handles both axes so scale
+    on parent/child layers stays conflict-free)
+───────────────────────────────────────── */
+@keyframes float1 {
+  0%   { transform: translate(  0px,   0px); }
+  22%  { transform: translate(  4px,  -6px); }
+  45%  { transform: translate(  2px, -13px); }
+  68%  { transform: translate( -3px,  -9px); }
+  85%  { transform: translate( -5px,  -3px); }
+  100% { transform: translate(  0px,   0px); }
+}
+@keyframes float2 {
+  0%   { transform: translate(  0px,  0px); }
+  28%  { transform: translate( -4px, -4px); }
+  52%  { transform: translate(  2px, -9px); }
+  74%  { transform: translate(  5px, -5px); }
+  100% { transform: translate(  0px,  0px); }
+}
+@keyframes float3 {
+  0%   { transform: translate(  0px,   0px); }
+  25%  { transform: translate( -5px,  -7px); }
+  55%  { transform: translate(  3px, -15px); }
+  78%  { transform: translate(  6px,  -7px); }
+  100% { transform: translate(  0px,   0px); }
+}
+@keyframes float4 {
+  0%   { transform: translate(  0px,  0px); }
+  32%  { transform: translate(  5px, -3px); }
+  58%  { transform: translate( -2px, -8px); }
+  82%  { transform: translate( -6px, -2px); }
+  100% { transform: translate(  0px,  0px); }
+}
+
+.chip-float-1 { animation: float1 3.8s ease-in-out 2.0s infinite; }
+.chip-float-2 { animation: float2 3.2s ease-in-out 2.7s infinite; }
+.chip-float-3 { animation: float3 4.2s ease-in-out 1.8s infinite; }
+.chip-float-4 { animation: float4 3.5s ease-in-out 3.2s infinite; }
+
+/* ─────────────────────────────────────────
+   Chip organic beat + slow size breath
+   Each class has its own base scale baked in so chips
+   look different sizes even at rest.
+   Float (translateY) lives on the PARENT div so there
+   is zero transform conflict.
+───────────────────────────────────────── */
+@keyframes chipLive1 {
+  0%   { transform: scale(0.90); }
+  9%   { transform: scale(0.98); }
+  20%  { transform: scale(0.91); }
+  31%  { transform: scale(0.95); }
+  48%  { transform: scale(0.84); }
+  63%  { transform: scale(0.96); }
+  78%  { transform: scale(0.87); }
+  90%  { transform: scale(0.93); }
+  100% { transform: scale(0.90); }
+}
+@keyframes chipLive2 {
+  0%   { transform: scale(1.06); }
+  11%  { transform: scale(1.14); }
+  24%  { transform: scale(1.07); }
+  37%  { transform: scale(1.11); }
+  53%  { transform: scale(0.99); }
+  67%  { transform: scale(1.13); }
+  82%  { transform: scale(1.03); }
+  100% { transform: scale(1.06); }
+}
+@keyframes chipLive3 {
+  0%   { transform: scale(0.87); }
+  14%  { transform: scale(0.96); }
+  26%  { transform: scale(0.88); }
+  40%  { transform: scale(0.93); }
+  55%  { transform: scale(0.81); }
+  70%  { transform: scale(0.94); }
+  84%  { transform: scale(0.85); }
+  100% { transform: scale(0.87); }
+}
+@keyframes chipLive4 {
+  0%   { transform: scale(1.10); }
+  10%  { transform: scale(1.18); }
+  23%  { transform: scale(1.11); }
+  36%  { transform: scale(1.16); }
+  52%  { transform: scale(1.03); }
+  66%  { transform: scale(1.17); }
+  80%  { transform: scale(1.07); }
+  100% { transform: scale(1.10); }
+}
+
+.chip-live-1 { animation: chipLive1  8.5s ease-in-out 3.0s infinite; }
+.chip-live-2 { animation: chipLive2  7.2s ease-in-out 4.8s infinite; }
+.chip-live-3 { animation: chipLive3  9.6s ease-in-out 2.2s infinite; }
+.chip-live-4 { animation: chipLive4  6.8s ease-in-out 5.5s infinite; }
+
+/* ─────────────────────────────────────────
+   Chip glow pulse — radial halo behind each avatar chip.
+   Uses only `scale` (no translate) so it doesn't conflict
+   with the parent float (translateY) or live (scale) layers.
+───────────────────────────────────────── */
+@keyframes chipGlowPulse {
+  0%, 100% { transform: scale(1.0); opacity: 0.55; }
+  50%       { transform: scale(2.0); opacity: 0.08; }
+}
+.chip-glow-1 { animation: chipGlowPulse 2.8s ease-in-out 2.5s infinite; }
+.chip-glow-2 { animation: chipGlowPulse 3.3s ease-in-out 3.1s infinite; }
+.chip-glow-3 { animation: chipGlowPulse 2.5s ease-in-out 1.9s infinite; }
+.chip-glow-4 { animation: chipGlowPulse 3.7s ease-in-out 3.8s infinite; }
