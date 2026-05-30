@@ -402,8 +402,8 @@ export function CircularGoal() {
       <motion.div
         className="absolute pointer-events-none"
         style={{ left: ARC_CX, top: ARC_CY, width: 0, height: 0, zIndex: 6 }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 9, repeat: Infinity, ease: 'linear', repeatType: 'loop' }}
+        animate={{ rotate: [0, 360] }}
+        transition={{ duration: 9, repeat: Infinity, ease: 'linear' }}
       >
         <motion.div
           style={{
@@ -422,8 +422,8 @@ export function CircularGoal() {
       <motion.div
         className="absolute pointer-events-none"
         style={{ left: ARC_CX, top: ARC_CY, width: 0, height: 0, zIndex: 6 }}
-        animate={{ rotate: -360 }}
-        transition={{ duration: 16, repeat: Infinity, ease: 'linear', repeatType: 'loop' }}
+        animate={{ rotate: [0, -360] }}
+        transition={{ duration: 16, repeat: Infinity, ease: 'linear' }}
       >
         <motion.div
           style={{
@@ -442,8 +442,8 @@ export function CircularGoal() {
       <motion.div
         className="absolute pointer-events-none"
         style={{ left: ARC_CX, top: ARC_CY, width: 0, height: 0, zIndex: 5 }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 24, repeat: Infinity, ease: 'linear', repeatType: 'loop' }}
+        animate={{ rotate: [0, 360] }}
+        transition={{ duration: 24, repeat: Infinity, ease: 'linear' }}
       >
         <motion.div
           style={{
