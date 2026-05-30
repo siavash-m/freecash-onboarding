@@ -6,9 +6,10 @@
 
 body {
   margin: 0;
-  background-color: #141523;
+  background-color: #0d0e1a;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
   min-height: 100dvh;
   overflow-x: hidden;
 }
@@ -19,6 +20,22 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  /* Subtle side shadow on desktop to frame the mobile shell */
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 0 60px rgba(0,0,0,0.6);
+}
+
+/* On larger screens show the mobile frame clearly */
+@media (min-width: 431px) {
+  body {
+    align-items: center;
+    padding: 24px 0;
+    min-height: 100vh;
+  }
+  #root {
+    min-height: min(100dvh, 900px);
+    border-radius: 32px;
+    overflow: hidden;
+  }
 }
 
 p { margin: 0; }
