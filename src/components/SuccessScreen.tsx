@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { motion, useAnimation } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence, useAnimation, LayoutGroup } from 'framer-motion';
 import { ASSETS } from '../assets';
 
 // ── Local image assets ────────────────────────────────────────────────────────
@@ -92,24 +92,20 @@ interface SuccessScreenProps { onGoHome: () => void }
 export function SuccessScreen({ onGoHome }: SuccessScreenProps) {
 
   // ── Chart collapse state ──────────────────────────────────────────────────
-  const [chartHidden, setChartHidden]     = useState(false);
-  const chartGroupControls                = useAnimation();
-  const chartWrapperRef                   = useRef<HTMLDivElement>(null);
-  const [wrapperHeight, setWrapperHeight] = useState<number | 'auto'>('auto');
+  const [chartHidden, setChartHidden] = useState(false);
+  const chartGroupControls            = useAnimation();
 
   useEffect(() => {
-    if (chartWrapperRef.current) setWrapperHeight(chartWrapperRef.current.offsetHeight);
-
-    // Celebration multi-bounce at 2.6 s
+    // Celebration multi-bounce at 3.5 s (user has seen + absorbed the $5)
     const t1 = setTimeout(() => {
       chartGroupControls.start({
         scale: [1, 1.12, 0.92, 1.06, 0.97, 1],
         transition: { duration: 0.62, ease: [0.34, 1.56, 0.64, 1] },
       });
-    }, 2600);
+    }, 3500);
 
-    // Playful exit at 3.4 s
-    const t2 = setTimeout(() => setChartHidden(true), 3400);
+    // Unmount chart section at 5 s — $5 pops in at ~1.6 s, so user sees it for ~3.4 s
+    const t2 = setTimeout(() => setChartHidden(true), 5000);
 
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [chartGroupControls]);
@@ -136,109 +132,110 @@ export function SuccessScreen({ onGoHome }: SuccessScreenProps) {
         className="flex flex-col items-center gap-6 px-[18px] pt-[48px] pb-[24px] w-full flex-1 min-h-0 overflow-y-auto"
         style={{ scrollbarWidth: 'none' }}>
 
-        {/* ══ Collapsible: Title + Chart ══════════════════════════════════════ */}
-        <motion.div
-          ref={chartWrapperRef}
-          style={{ overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}
-          animate={chartHidden
-            ? { height: 0, opacity: 0, marginBottom: -24 }
-            : { height: wrapperHeight === 'auto' ? undefined : wrapperHeight, opacity: 1, marginBottom: 0 }
-          }
-          transition={{ type: 'spring', stiffness: 240, damping: 28 }}
-        >
+        <LayoutGroup>
 
-          {/* ── Title ── */}
-          <motion.div className="flex flex-col gap-1 items-center text-center w-full"
-            initial={{ opacity: 0, y: 18 }}
-            animate={chartHidden ? { opacity: 0, y: -14, scale: 0.9 } : { opacity: 1, y: 0, scale: 1 }}
-            transition={chartHidden
-              ? { type: 'spring', stiffness: 380, damping: 22 }
-              : { ...SPRING_SLIDE, delay: 0.08 }
-            }
-          >
-            <p className="font-poppins font-bold text-[24px] text-[#fee810] leading-normal">You reached first goal!</p>
-            <p className="font-poppins font-medium text-[16px] text-[#a9a9ca] leading-normal">Start earning more by playing first game.</p>
-          </motion.div>
-
-          {/* ── Chart container ── */}
-          <div className="relative shrink-0" style={{ width: W, height: H }}>
-
-            {/* Rings + arc group — celebration wiggle + collapses */}
-            <motion.div className="absolute inset-0"
-              animate={chartHidden ? { scale: 0, rotate: 8, opacity: 0 } : chartGroupControls}
-              transition={chartHidden ? { type: 'spring', stiffness: 340, damping: 20, delay: 0.12 } : undefined}
-            >
-              {RINGS.map(({ src, size, offset }, i) => (
-                <motion.img key={i} src={src} alt=""
-                  className="absolute pointer-events-none select-none"
-                  style={{ width: size, height: size, left: offset, top: offset }}
-                  initial={{ opacity: 0, scale: 0.88 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ ...SPRING_ENTRY, delay: 0.2 + i * 0.065 }} />
-              ))}
-
-              <motion.svg width={W} height={H} className="absolute inset-0 pointer-events-none"
-                style={{ overflow: 'visible' }}
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
-                <defs>
-                  <filter id="yellow-glow" x="-40%" y="-40%" width="180%" height="180%">
-                    <feGaussianBlur stdDeviation="4" in="SourceGraphic" result="blur" />
-                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                  </filter>
-                </defs>
-
-                {([0, 1.9, 3.8] as const).map((extraDelay, i) => (
-                  <motion.circle key={`pulse${i}`} cx={CX} cy={CY} r={84}
-                    stroke="rgba(254,232,16,0.50)" strokeWidth={1.5} fill="none"
-                    style={{ transformOrigin: `${CX}px ${CY}px` }}
-                    initial={{ opacity: 0, scale: 1.1 }}
-                    animate={{ scale: [1.1, 2.1], opacity: [0.42, 0] }}
-                    transition={{ delay: 2.2 + extraDelay, duration: 2.4, repeat: Infinity, repeatDelay: 5.8 - extraDelay, ease: [0.2, 0.8, 0.4, 1] }} />
-                ))}
-
-                <circle cx={CX} cy={CY} r={R} fill="none" stroke="#33334d" strokeWidth={SW} />
-
-                <g transform={`rotate(-90, ${CX}, ${CY})`}>
-                  <motion.circle cx={CX} cy={CY} r={R}
-                    fill="none" stroke="#fee810" strokeWidth={SW} strokeLinecap="round"
-                    strokeDasharray={CIRC}
-                    initial={{ strokeDashoffset: CIRC }}
-                    animate={{
-                      strokeDashoffset: 0,
-                      filter: [
-                        'drop-shadow(0 0 8px rgba(254,232,16,0.80))',
-                        'drop-shadow(0 0 18px rgba(254,232,16,1.00))',
-                        'drop-shadow(0 0 8px rgba(254,232,16,0.80))',
-                      ],
-                    }}
-                    transition={{
-                      strokeDashoffset: { delay: 0.55, duration: 1.35, ease: EASE_DRAW },
-                      filter: { delay: 2.2, duration: 2.8, repeat: Infinity, ease: 'easeInOut' },
-                    }}
-                    filter="url(#yellow-glow)" />
-                </g>
-              </motion.svg>
-            </motion.div>
-
-            {/* Center $5 — very bouncy entry, joyful spin+zoom exit */}
+        {/* ══ Title + Chart — unmounts via AnimatePresence when done ══════════ */}
+        <AnimatePresence>
+          {!chartHidden && (
             <motion.div
-              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={chartHidden
-                ? { scale: [1, 2.0, 0], y: [0, -18, -90], rotate: [0, 0, 540], opacity: [1, 1, 0] }
-                : { opacity: 1, scale: 1, y: 0, rotate: 0 }
-              }
-              transition={chartHidden
-                ? { duration: 0.52, ease: [0.34, 1.2, 0.64, 1] }
-                : { type: 'spring', stiffness: 650, damping: 11, delay: 1.55 }
-              }
+              key="chart-section"
+              layout
+              className="w-full flex flex-col items-center gap-6"
+              /* No initial/animate height control — natural CSS auto height */
+              exit={{ opacity: 0, transition: { duration: 0.15, delay: 0.45 } }}
             >
-              <span className="font-poppins font-bold text-[40px] text-[#fee810] leading-none whitespace-nowrap">$5</span>
-              <span className="font-poppins font-bold text-[10px] text-[#a9a9ca] text-center leading-normal">Completed</span>
-            </motion.div>
 
-          </div>
-        </motion.div>
+              {/* ── Title — fades + rises on exit ── */}
+              <motion.div className="flex flex-col gap-1 items-center text-center w-full"
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...SPRING_SLIDE, delay: 0.08 }}
+                exit={{ opacity: 0, y: -16, scale: 0.88,
+                  transition: { type: 'spring', stiffness: 380, damping: 22 } }}
+              >
+                <p className="font-poppins font-bold text-[24px] text-[#fee810] leading-normal">You reached first goal!</p>
+                <p className="font-poppins font-medium text-[16px] text-[#a9a9ca] leading-normal">Start earning more by playing first game.</p>
+              </motion.div>
+
+              {/* ── Chart container ── */}
+              <div className="relative shrink-0" style={{ width: W, height: H }}>
+
+                {/* Rings + arc group — celebration wiggle, then spin-shrink exit */}
+                <motion.div className="absolute inset-0"
+                  animate={chartGroupControls}
+                  exit={{ scale: 0, rotate: 10, opacity: 0,
+                    transition: { type: 'spring', stiffness: 320, damping: 20, delay: 0.14 } }}
+                >
+                  {RINGS.map(({ src, size, offset }, i) => (
+                    <motion.img key={i} src={src} alt=""
+                      className="absolute pointer-events-none select-none"
+                      style={{ width: size, height: size, left: offset, top: offset }}
+                      initial={{ opacity: 0, scale: 0.88 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ ...SPRING_ENTRY, delay: 0.2 + i * 0.065 }} />
+                  ))}
+
+                  <motion.svg width={W} height={H} className="absolute inset-0 pointer-events-none"
+                    style={{ overflow: 'visible' }}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+                    <defs>
+                      <filter id="yellow-glow" x="-40%" y="-40%" width="180%" height="180%">
+                        <feGaussianBlur stdDeviation="4" in="SourceGraphic" result="blur" />
+                        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                      </filter>
+                    </defs>
+                    {([0, 1.9, 3.8] as const).map((extraDelay, i) => (
+                      <motion.circle key={`pulse${i}`} cx={CX} cy={CY} r={84}
+                        stroke="rgba(254,232,16,0.50)" strokeWidth={1.5} fill="none"
+                        style={{ transformOrigin: `${CX}px ${CY}px` }}
+                        initial={{ opacity: 0, scale: 1.1 }}
+                        animate={{ scale: [1.1, 2.1], opacity: [0.42, 0] }}
+                        transition={{ delay: 2.2 + extraDelay, duration: 2.4, repeat: Infinity,
+                          repeatDelay: 5.8 - extraDelay, ease: [0.2, 0.8, 0.4, 1] }} />
+                    ))}
+                    <circle cx={CX} cy={CY} r={R} fill="none" stroke="#33334d" strokeWidth={SW} />
+                    <g transform={`rotate(-90, ${CX}, ${CY})`}>
+                      <motion.circle cx={CX} cy={CY} r={R}
+                        fill="none" stroke="#fee810" strokeWidth={SW} strokeLinecap="round"
+                        strokeDasharray={CIRC}
+                        initial={{ strokeDashoffset: CIRC }}
+                        animate={{
+                          strokeDashoffset: 0,
+                          filter: ['drop-shadow(0 0 8px rgba(254,232,16,0.80))',
+                            'drop-shadow(0 0 18px rgba(254,232,16,1.00))',
+                            'drop-shadow(0 0 8px rgba(254,232,16,0.80))'],
+                        }}
+                        transition={{
+                          strokeDashoffset: { delay: 0.55, duration: 1.35, ease: EASE_DRAW },
+                          filter: { delay: 2.2, duration: 2.8, repeat: Infinity, ease: 'easeInOut' },
+                        }}
+                        filter="url(#yellow-glow)" />
+                    </g>
+                  </motion.svg>
+                </motion.div>
+
+                {/* $5 Completed — bouncy pop-in, joyful spin+zoom exit */}
+                <motion.div
+                  className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 650, damping: 11, delay: 1.55 }}
+                  exit={{
+                    scale: [1, 1.6, 2.2, 0],
+                    y:     [0, -10, -30, -100],
+                    rotate:[0,  15, 180, 720],
+                    opacity: [1,  1,   1,   0],
+                    transition: { duration: 0.58, ease: [0.34, 1.2, 0.64, 1] },
+                  }}
+                >
+                  <span className="font-poppins font-bold text-[40px] text-[#fee810] leading-none whitespace-nowrap">$5</span>
+                  <span className="font-poppins font-bold text-[10px] text-[#a9a9ca] text-center leading-normal">Completed</span>
+                </motion.div>
+
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* ══ Earning path ════════════════════════════════════════════════════ */}
         <motion.div layout className="flex flex-col gap-2 items-start px-6 w-full">
@@ -377,6 +374,7 @@ export function SuccessScreen({ onGoHome }: SuccessScreenProps) {
           </motion.div>
         </motion.div>
 
+        </LayoutGroup>{/* end layout group */}
       </div>{/* end scrollable area */}
 
       {/* ══ Go to home — pinned at bottom (same position as onboarding CTA / Skip) */}
