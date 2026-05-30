@@ -2,6 +2,8 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { ASSETS } from '../assets';
 import { useCountUp } from '../hooks/useCountUp';
+
+const GROUP_836 = '/images/group-836.svg';
 import { PaymentMethodBody } from './PaymentMethodScreen';
 import { GameGenreBody }     from './GameGenreScreen';
 import { SessionLengthBody } from './SessionLengthScreen';
@@ -207,19 +209,27 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
           <motion.div
             ref={balanceRef}
             animate={badge}
-            className="flex gap-[6px] items-center pl-[10px] pr-[16px] py-[2px] rounded-[40px] shrink-0"
-            style={{ backgroundColor: '#00403c' }}
+            className="flex gap-[8px] items-center pl-[14px] pr-[20px] py-[4px] rounded-[40px] shrink-0"
+            style={{ backgroundColor: '#00403c', filter: 'drop-shadow(0px 4px 2px rgba(0,0,0,0.25))' }}
           >
-            <motion.img src={ASSETS.paidIcon} alt="" className="shrink-0" style={{ width: 46, height: 46 }}
+            <motion.div
+              className="flex items-center justify-center shrink-0"
+              style={{ width: 43, height: 34 }}
               initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
+              animate={{ rotate: 10.03, opacity: 1 }}
               transition={{ ...SPRING_POP, delay: 0.18 }}
-            />
+            >
+              <img src={GROUP_836} alt="" style={{ width: 39, height: 28 }} />
+            </motion.div>
             <div className="flex flex-col items-start leading-normal">
-              <span className="font-poppins font-bold text-[14px] text-[#00d676] whitespace-nowrap">
+              <span className="font-poppins font-black text-[10px] text-[#71ffbf] uppercase whitespace-nowrap"
+                style={{ textShadow: '0px 0.8px 0px black' }}>
+                Balance
+              </span>
+              <span className="font-poppins font-black text-[14px] text-white whitespace-nowrap tracking-[0.42px]"
+                style={{ textShadow: '0px 1px 0px black' }}>
                 $ {(displayCents / 100).toFixed(2)}
               </span>
-              <span className="font-poppins font-medium text-[10px] text-[#a9a9ca] whitespace-nowrap">Balance</span>
             </div>
           </motion.div>
 
@@ -229,8 +239,10 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
         {/* Progress bar — state-driven, no full reset between steps */}
         <div className="flex flex-col gap-[2px] w-full">
           <div className="flex items-center justify-between w-full">
-            <span className="font-poppins font-medium text-[10px] text-[#a9a9ca]">$0</span>
-            <span className="font-poppins font-bold   text-[14px] text-[#00d676]">$5</span>
+            <span className="font-poppins font-black text-[14px] text-white tracking-[0.42px]"
+              style={{ textShadow: '0px 1px 0px black' }}>$0</span>
+            <span className="font-poppins font-black text-[14px] text-[#00da6b] tracking-[0.42px]"
+              style={{ textShadow: '0px 1px 0px black' }}>$5</span>
           </div>
           <motion.div
             className="flex gap-[6px] h-[10px] items-center w-full"
@@ -239,33 +251,52 @@ export function QuestionFlow({ onBackToStart, onDone }: QuestionFlowProps) {
             transition={{ delay: 0.20, duration: 0.26, ease: [0.4, 0, 0.2, 1] }}
           >
             {bars.map((barState, i) => (
-              <motion.div key={i} className="flex-1 h-full min-w-0 rounded-[100px] relative overflow-hidden"
-                style={{ backgroundColor: '#33334d', transformOrigin: 'center' }}
+              <motion.div key={i} className="flex-1 h-full min-w-0 relative"
+                style={{ transformOrigin: 'center' }}
                 animate={bumpArr[i]}>
 
-                {/* Green completion overlay — scaleX wipe from left */}
+                {/* Base: dark grey pill (unvisited) */}
+                <div className="absolute inset-0 rounded-[100px]" style={{ backgroundColor: '#33334d' }} />
+
+                {/* Green 3-layer pill — scaleX wipe from left */}
                 <motion.div
-                  className="absolute inset-0 rounded-[100px]"
-                  style={{ backgroundColor: '#00d676', transformOrigin: 'left center' }}
+                  className="absolute inset-0"
+                  style={{ transformOrigin: 'left center' }}
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: barState === GREEN ? 1 : 0 }}
                   transition={
                     barState === GREEN && initialEntryDoneRef.current
-                      ? { duration: 0.55, ease: [0.22, 1, 0.36, 1] }  // gentle, visible wipe on user completion
+                      ? { duration: 0.55, ease: [0.22, 1, 0.36, 1] }
                       : barState === GREEN
-                      ? { duration: 0.36, ease: [0.4, 0, 0.2, 1] }   // gentle on initial entry
-                      : { duration: 0.28, ease: [0.4, 0, 0.2, 1] }   // ease on retraction
+                      ? { duration: 0.36, ease: [0.4, 0, 0.2, 1] }
+                      : { duration: 0.28, ease: [0.4, 0, 0.2, 1] }
                   }
-                />
+                >
+                  <div className="absolute inset-0 rounded-[100px]"
+                    style={{ backgroundColor: '#00d676', boxShadow: '0px 0px 12px 0px rgba(0,214,118,0.8)' }} />
+                  <div className="absolute"
+                    style={{ left: 2, right: 2, top: 4.55, bottom: 1.45, backgroundColor: '#03bf66',
+                      borderRadius: '50px 50px 300px 300px' }} />
+                  <div className="absolute"
+                    style={{ left: 2, right: 2, top: 1.55, bottom: 4.45, backgroundColor: '#1cf192',
+                      borderRadius: '300px 300px 50px 50px' }} />
+                </motion.div>
 
-                {/* White current-step indicator */}
+                {/* Grey/white 3-layer pill — current step indicator */}
                 <motion.div
-                  className="absolute inset-0 rounded-[100px]"
-                  style={{ backgroundColor: '#ffffff' }}
+                  className="absolute inset-0"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: barState === WHITE ? 1 : 0 }}
                   transition={{ duration: 0.26, ease: [0.4, 0, 0.2, 1] }}
-                />
+                >
+                  <div className="absolute inset-0 rounded-[100px]" style={{ backgroundColor: '#cbcbde' }} />
+                  <div className="absolute"
+                    style={{ left: 2, right: 2, top: 4.55, bottom: 1.45, backgroundColor: '#bfc1c5',
+                      borderRadius: '50px 50px 300px 300px' }} />
+                  <div className="absolute"
+                    style={{ left: 2, right: 2, top: 1.55, bottom: 4.45, backgroundColor: '#ffffff',
+                      borderRadius: '300px 300px 50px 50px' }} />
+                </motion.div>
               </motion.div>
             ))}
           </motion.div>

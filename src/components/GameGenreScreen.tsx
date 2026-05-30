@@ -2,6 +2,10 @@ import { useState, useCallback, useRef } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { ASSETS } from '../assets';
 
+const RECT_265 = '/images/rect-265.svg'; // selected card corner
+const RECT_266 = '/images/rect-266.svg'; // unselected card corner
+const RECT_267 = '/images/rect-267.svg'; // skip button corner
+
 // ── Spring configs ────────────────────────────────────────────────────────────
 const SPRING_SLIDE  = { type: 'spring', stiffness: 340, damping: 28 } as const;
 const SPRING_ENTRY  = { type: 'spring', stiffness: 480, damping: 18 } as const;
@@ -67,7 +71,7 @@ function GenreCard({ opt, index, isSelected, anySelected, onSelect }: GenreCardP
     controls.start({
       scale:           [1, 0.88, 1.18, 0.96, 1.0],
       backgroundColor: '#00da6b',
-      boxShadow:       '0px 8px 0px #00984c, 0 0 32px rgba(0,218,107,0.45)',
+      boxShadow:       '0px -6px 0px 0px #71ffbf, 0px 4px 0px 0px #00984c',
       transition: {
         scale:           { ...SPRING_POP, duration: 0.52 },
         backgroundColor: { duration: 0.24, ease: [0.4, 0, 0.2, 1] },
@@ -85,14 +89,14 @@ function GenreCard({ opt, index, isSelected, anySelected, onSelect }: GenreCardP
       <motion.button
         ref={cardRef}
         className="relative flex items-center justify-center rounded-[10px] px-[20px] py-[32px] w-full h-full cursor-pointer border-0 outline-none text-left overflow-hidden"
-        style={{ backgroundColor: '#1d1e30', boxShadow: '0px 6px 0px #33334d' }}
+        style={{ backgroundColor: '#1d1e30', boxShadow: '0px -6px 0px 0px #33334d, 0px 6px 0px 0px #0f0f1a' }}
         initial={{ opacity: 0, y: 24 }}
         animate={controls}
         onViewportEnter={() =>
           controls.start({
             opacity: 1, y: 0,
             backgroundColor: '#1d1e30',
-            boxShadow: '0px 6px 0px #33334d',
+            boxShadow: '0px -6px 0px 0px #33334d, 0px 6px 0px 0px #0f0f1a',
             transition: { ...SPRING_ENTRY, delay: 0.30 + index * 0.07 },
           })
         }
@@ -176,6 +180,11 @@ function GenreCard({ opt, index, isSelected, anySelected, onSelect }: GenreCardP
             onAnimationComplete={() => setParticles(prev => prev.filter(pp => pp.id !== p.id))}
           />
         ))}
+
+        {/* Corner decoration */}
+        <img src={isSelected ? RECT_265 : RECT_266} alt=""
+          className="absolute pointer-events-none"
+          style={{ top: 4, right: 4, width: 26, height: 20, zIndex: 15 }} />
       </motion.button>
     </motion.div>
   );
@@ -242,9 +251,9 @@ export function GameGenreBody({ onSelect, onSkip }: GameGenreBodyProps) {
       >
         <motion.button
           className="relative flex items-center justify-center rounded-[6px] px-[16px] py-[12px] w-full font-poppins font-semibold text-[16px] text-white cursor-pointer border-0 outline-none overflow-hidden"
-          style={{ backgroundColor: '#525268', boxShadow: '0px 4px 0px #33334d' }}
+          style={{ backgroundColor: '#525268', boxShadow: '0px -6px 0px 0px #7d7d9e, 0px 4px 0px 0px #33334d' }}
           whileHover={{ y: -2, backgroundColor: '#5e5e7a' }}
-          whileTap={{ y: 1, scale: 0.97, boxShadow: '0px 1px 0px #33334d', transition: { duration: 0.06 } }}
+          whileTap={{ y: 1, scale: 0.97, boxShadow: '0px -2px 0px 0px #7d7d9e, 0px 1px 0px 0px #33334d', transition: { duration: 0.06 } }}
           transition={{ type: 'spring', stiffness: 380, damping: 22 }}
           onClick={onSkip}
         >
@@ -256,6 +265,9 @@ export function GameGenreBody({ onSelect, onSkip }: GameGenreBodyProps) {
             transition={{ delay: 1.4, duration: 1.0, ease: [0.4, 0, 0.2, 1], repeat: Infinity, repeatDelay: 3.0 }}
           />
           Skip
+          <img src={RECT_267} alt=""
+            className="absolute pointer-events-none"
+            style={{ top: 4, right: 4, width: 26, height: 20 }} />
         </motion.button>
       </motion.div>
 
