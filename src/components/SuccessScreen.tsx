@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
+import { motion, useAnimation } from 'framer-motion';
 import { ASSETS } from '../assets';
 
 // ── Local image assets (downloaded from Figma node 5424-15456) ───────────────
@@ -165,6 +166,29 @@ interface SuccessScreenProps {
 
 // ── SuccessScreen ─────────────────────────────────────────────────────────────
 export function SuccessScreen({ onGoHome }: SuccessScreenProps) {
+  // ── Chart collapse ────────────────────────────────────────────────────────
+  const [chartHidden, setChartHidden]     = useState(false);
+  const chartGroupControls                = useAnimation();
+  const chartWrapperRef                   = useRef<HTMLDivElement>(null);
+  const [wrapperHeight, setWrapperHeight] = useState<number | 'auto'>('auto');
+
+  useEffect(() => {
+    // Measure wrapper so we can spring its height to 0
+    if (chartWrapperRef.current) {
+      setWrapperHeight(chartWrapperRef.current.offsetHeight);
+    }
+    // Celebration wiggle at 2.6 s — "done!" bounce before collapse
+    const t1 = setTimeout(() => {
+      chartGroupControls.start({
+        scale: [1, 1.07, 0.97, 1],
+        transition: { duration: 0.45, ease: 'easeOut' },
+      });
+    }, 2600);
+    // Playful exit at 3.4 s
+    const t2 = setTimeout(() => setChartHidden(true), 3400);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [chartGroupControls]);
+
   return (
     <div
       className="relative flex flex-col bg-[#141523]"
@@ -189,128 +213,167 @@ export function SuccessScreen({ onGoHome }: SuccessScreenProps) {
         className="flex flex-col items-center gap-6 px-[18px] pt-[48px] pb-[48px] w-full"
       >
 
-        {/* ══ Title ══════════════════════════════════════════════════════════ */}
+        {/* ══ Collapsible: Title + Chart ═════════════════════════════════════ */}
         <motion.div
-          className="flex flex-col gap-1 items-center text-center w-full"
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...SPRING_SLIDE, delay: 0.08 }}
+          ref={chartWrapperRef}
+          style={{
+            overflow: 'hidden', width: '100%',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24,
+          }}
+          animate={chartHidden
+            ? { height: 0, opacity: 0, marginBottom: -24 }
+            : { height: wrapperHeight === 'auto' ? undefined : wrapperHeight, opacity: 1, marginBottom: 0 }
+          }
+          transition={{ type: 'spring', stiffness: 240, damping: 28 }}
         >
-          <p className="font-poppins font-bold text-[24px] text-[#fee810] leading-normal">
-            You reached first goal!
-          </p>
-          <p className="font-poppins font-medium text-[16px] text-[#a9a9ca] leading-normal">
-            Start earning more by playing first game.
-          </p>
+
+          {/* ── Title ── */}
+          <motion.div
+            className="flex flex-col gap-1 items-center text-center w-full"
+            initial={{ opacity: 0, y: 18 }}
+            animate={chartHidden
+              ? { opacity: 0, y: -14, scale: 0.9 }
+              : { opacity: 1, y: 0, scale: 1 }
+            }
+            transition={chartHidden
+              ? { type: 'spring', stiffness: 380, damping: 22 }
+              : { ...SPRING_SLIDE, delay: 0.08 }
+            }
+          >
+            <p className="font-poppins font-bold text-[24px] text-[#fee810] leading-normal">
+              You reached first goal!
+            </p>
+            <p className="font-poppins font-medium text-[16px] text-[#a9a9ca] leading-normal">
+              Start earning more by playing first game.
+            </p>
+          </motion.div>
+
+          {/* ── Chart container ── */}
+          <div className="relative shrink-0" style={{ width: W, height: H }}>
+
+            {/* Rings + arc group — celebration wiggle target + collapses on exit */}
+            <motion.div
+              className="absolute inset-0"
+              animate={chartHidden
+                ? { scale: 0, rotate: 8, opacity: 0 }
+                : chartGroupControls
+              }
+              transition={chartHidden
+                ? { type: 'spring', stiffness: 340, damping: 20, delay: 0.12 }
+                : undefined
+              }
+            >
+              {/* Decorative ring layers */}
+              {RINGS.map(({ src, size, offset }, i) => (
+                <motion.img
+                  key={i}
+                  src={src}
+                  alt=""
+                  className="absolute pointer-events-none select-none"
+                  style={{ width: size, height: size, left: offset, top: offset }}
+                  initial={{ opacity: 0, scale: 0.88 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ ...SPRING_ENTRY, delay: 0.2 + i * 0.065 }}
+                />
+              ))}
+
+              {/* SVG: yellow full-circle arc + yellow pulse rings */}
+              <motion.svg
+                width={W} height={H}
+                className="absolute inset-0 pointer-events-none"
+                style={{ overflow: 'visible' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                <defs>
+                  <filter id="yellow-glow" x="-40%" y="-40%" width="180%" height="180%">
+                    <feGaussianBlur stdDeviation="4" in="SourceGraphic" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                {/* Yellow pulse rings */}
+                {([0, 1.9, 3.8] as const).map((extraDelay, i) => (
+                  <motion.circle
+                    key={`pulse${i}`}
+                    cx={CX} cy={CY} r={84}
+                    stroke="rgba(254,232,16,0.50)"
+                    strokeWidth={1.5}
+                    fill="none"
+                    style={{ transformOrigin: `${CX}px ${CY}px` }}
+                    initial={{ opacity: 0, scale: 1.1 }}
+                    animate={{ scale: [1.1, 2.1], opacity: [0.42, 0] }}
+                    transition={{
+                      delay:       2.2 + extraDelay,
+                      duration:    2.4,
+                      repeat:      Infinity,
+                      repeatDelay: 5.8 - extraDelay,
+                      ease:        [0.2, 0.8, 0.4, 1],
+                    }}
+                  />
+                ))}
+
+                {/* Grey track */}
+                <circle cx={CX} cy={CY} r={R} fill="none" stroke="#33334d" strokeWidth={SW} />
+
+                {/* Yellow arc — draws full circle */}
+                <g transform={`rotate(-90, ${CX}, ${CY})`}>
+                  <motion.circle
+                    cx={CX} cy={CY} r={R}
+                    fill="none"
+                    stroke="#fee810"
+                    strokeWidth={SW}
+                    strokeLinecap="round"
+                    strokeDasharray={CIRC}
+                    initial={{ strokeDashoffset: CIRC }}
+                    animate={{
+                      strokeDashoffset: 0,
+                      filter: [
+                        'drop-shadow(0 0 8px rgba(254,232,16,0.80))',
+                        'drop-shadow(0 0 18px rgba(254,232,16,1.00))',
+                        'drop-shadow(0 0 8px rgba(254,232,16,0.80))',
+                      ],
+                    }}
+                    transition={{
+                      strokeDashoffset: { delay: 0.55, duration: 1.35, ease: EASE_DRAW },
+                      filter: { delay: 2.2, duration: 2.8, repeat: Infinity, ease: 'easeInOut' },
+                    }}
+                    filter="url(#yellow-glow)"
+                  />
+                </g>
+              </motion.svg>
+            </motion.div>
+
+            {/* Center: $5 + Completed — exits independently with "pocket" pop */}
+            <motion.div
+              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={chartHidden
+                ? { scale: [1, 1.3, 0], y: [0, -28, -28], opacity: [1, 1, 0] }
+                : { opacity: 1, scale: 1, y: 0 }
+              }
+              transition={chartHidden
+                ? { duration: 0.36, ease: [0.22, 1, 0.36, 1] }
+                : { ...SPRING_POP, delay: 1.55 }
+              }
+            >
+              <span className="font-poppins font-bold text-[40px] text-[#fee810] leading-none whitespace-nowrap">
+                $5
+              </span>
+              <span className="font-poppins font-bold text-[10px] text-[#a9a9ca] text-center leading-normal">
+                Completed
+              </span>
+            </motion.div>
+          </div>
+
         </motion.div>
 
-        {/* ══ Completed ring ═════════════════════════════════════════════════ */}
-        <div
-          className="relative shrink-0"
-          style={{ width: W, height: H }}
-        >
-          {/* Decorative ring layers */}
-          {RINGS.map(({ src, size, offset }, i) => (
-            <motion.img
-              key={i}
-              src={src}
-              alt=""
-              className="absolute pointer-events-none select-none"
-              style={{ width: size, height: size, left: offset, top: offset }}
-              initial={{ opacity: 0, scale: 0.88 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ ...SPRING_ENTRY, delay: 0.2 + i * 0.065 }}
-            />
-          ))}
-
-          {/* SVG: yellow full-circle arc + yellow pulse rings */}
-          <motion.svg
-            width={W} height={H}
-            className="absolute inset-0 pointer-events-none"
-            style={{ overflow: 'visible' }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-          >
-            <defs>
-              <filter id="yellow-glow" x="-40%" y="-40%" width="180%" height="180%">
-                <feGaussianBlur stdDeviation="4" in="SourceGraphic" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            {/* Yellow pulse rings — expand outward after arc completes */}
-            {([0, 1.9, 3.8] as const).map((extraDelay, i) => (
-              <motion.circle
-                key={`pulse${i}`}
-                cx={CX} cy={CY} r={84}
-                stroke="rgba(254,232,16,0.50)"
-                strokeWidth={1.5}
-                fill="none"
-                style={{ transformOrigin: `${CX}px ${CY}px` }}
-                initial={{ opacity: 0, scale: 1.1 }}
-                animate={{ scale: [1.1, 2.1], opacity: [0.42, 0] }}
-                transition={{
-                  delay:       2.2 + extraDelay,
-                  duration:    2.4,
-                  repeat:      Infinity,
-                  repeatDelay: 5.8 - extraDelay,
-                  ease:        [0.2, 0.8, 0.4, 1],
-                }}
-              />
-            ))}
-
-            {/* Grey track */}
-            <circle cx={CX} cy={CY} r={R} fill="none" stroke="#33334d" strokeWidth={SW} />
-
-            {/* Yellow arc — draws full circle clockwise from 12 o'clock */}
-            <g transform={`rotate(-90, ${CX}, ${CY})`}>
-              <motion.circle
-                cx={CX} cy={CY} r={R}
-                fill="none"
-                stroke="#fee810"
-                strokeWidth={SW}
-                strokeLinecap="round"
-                strokeDasharray={CIRC}
-                initial={{ strokeDashoffset: CIRC }}
-                animate={{
-                  strokeDashoffset: 0,
-                  filter: [
-                    'drop-shadow(0 0 8px rgba(254,232,16,0.80))',
-                    'drop-shadow(0 0 18px rgba(254,232,16,1.00))',
-                    'drop-shadow(0 0 8px rgba(254,232,16,0.80))',
-                  ],
-                }}
-                transition={{
-                  strokeDashoffset: { delay: 0.55, duration: 1.35, ease: EASE_DRAW },
-                  filter: { delay: 2.2, duration: 2.8, repeat: Infinity, ease: 'easeInOut' },
-                }}
-                filter="url(#yellow-glow)"
-              />
-            </g>
-          </motion.svg>
-
-          {/* Center: $5 + Completed */}
-          <motion.div
-            className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ ...SPRING_POP, delay: 1.55 }}
-          >
-            <span className="font-poppins font-bold text-[40px] text-[#fee810] leading-none whitespace-nowrap">
-              $5
-            </span>
-            <span className="font-poppins font-bold text-[10px] text-[#a9a9ca] text-center leading-normal">
-              Completed
-            </span>
-          </motion.div>
-        </div>
-
         {/* ══ Earning path ═══════════════════════════════════════════════════ */}
-        <div className="flex flex-col gap-2 items-start px-6 w-full">
+        <motion.div layout className="flex flex-col gap-2 items-start px-6 w-full">
           <motion.p
             className="font-poppins font-medium text-[12px] text-[#a9a9ca] text-center w-full leading-normal"
             initial={{ opacity: 0 }}
@@ -384,10 +447,11 @@ export function SuccessScreen({ onGoHome }: SuccessScreenProps) {
               ))}
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* ══ Recommended game card ══════════════════════════════════════════ */}
         <motion.div
+          layout
           className="relative w-full"
           initial={{ opacity: 0, y: 28 }}
           animate={{ opacity: 1, y: 0 }}
@@ -533,6 +597,7 @@ export function SuccessScreen({ onGoHome }: SuccessScreenProps) {
 
         {/* ══ Go to home ═════════════════════════════════════════════════════ */}
         <motion.button
+          layout
           className="relative flex items-center justify-center w-full rounded-[6px] px-[16px] py-[12px] font-poppins font-semibold text-[16px] text-white cursor-pointer border-0 outline-none overflow-hidden"
           style={{ backgroundColor: '#525268', boxShadow: '0px 4px 0px #33334d' }}
           whileHover={{ y: -2, backgroundColor: '#5e5e7a' }}
