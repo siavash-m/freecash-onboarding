@@ -4,7 +4,6 @@ import { ASSETS } from '../assets';
 
 const RECT_265 = '/images/rect-265.svg';
 const RECT_266 = '/images/rect-266.svg';
-const RECT_267 = '/images/rect-267.svg';
 
 const SPRING_SLIDE  = { type: 'spring', stiffness: 340, damping: 28 } as const;
 const SPRING_ENTRY  = { type: 'spring', stiffness: 480, damping: 18 } as const;
@@ -250,24 +249,13 @@ export function GameGenreBody({ onSelect, onSkip, prevAnswer, onNext }: GameGenr
         transition={{ ...SPRING_CTA, delay: 0.62 }}
       >
         <motion.button
-          className="relative flex items-center justify-center rounded-[6px] px-[16px] py-[12px] w-full font-poppins font-semibold text-[16px] text-white cursor-pointer border-0 outline-none overflow-hidden"
-          style={{ backgroundColor: '#525268', boxShadow: '0px -6px 0px 0px #7d7d9e, 0px 4px 0px 0px #33334d' }}
-          whileHover={{ y: -2, backgroundColor: '#5e5e7a' }}
-          whileTap={{ y: 1, scale: 0.97, boxShadow: '0px -2px 0px 0px #7d7d9e, 0px 1px 0px 0px #33334d', transition: { duration: 0.06 } }}
+          className="flex items-center justify-center w-full py-[12px] font-poppins font-semibold text-[16px] text-[#a9a9ca] cursor-pointer border-0 outline-none bg-transparent"
+          whileHover={{ color: '#ffffff' }}
+          whileTap={{ scale: 0.97, transition: { duration: 0.06 } }}
           transition={{ type: 'spring', stiffness: 380, damping: 22 }}
           onClick={onSkip}
         >
-          <motion.span aria-hidden
-            className="pointer-events-none absolute inset-0"
-            style={{ background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.18) 50%, transparent 65%)' }}
-            initial={{ x: '-110%' }}
-            animate={{ x: '210%' }}
-            transition={{ delay: 1.4, duration: 1.0, ease: [0.4, 0, 0.2, 1], repeat: Infinity, repeatDelay: 3.0 }}
-          />
           Skip
-          <img src={RECT_267} alt=""
-            className="absolute pointer-events-none"
-            style={{ top: 4, right: 4, width: 26, height: 20 }} />
         </motion.button>
 
         {onNext && (

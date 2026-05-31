@@ -51,7 +51,7 @@ function App() {
           exit={{ opacity: 0 }}
           transition={{ type: 'spring', stiffness: 240, damping: 20 }}
         >
-          <SuccessScreen earnedCents={earnedCents} onGoHome={() => setScreen('onboarding')} />
+          <SuccessScreen earnedCents={earnedCents} />
         </motion.div>
       )}
     </AnimatePresence>

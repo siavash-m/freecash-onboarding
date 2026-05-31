@@ -90,12 +90,11 @@ function TimelineCheck({ completed, current = false, size, greyDelay, greenDelay
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface SuccessScreenProps {
-  onGoHome:    () => void;
   earnedCents: number;
 }
 
 // ── SuccessScreen ─────────────────────────────────────────────────────────────
-export function SuccessScreen({ onGoHome, earnedCents }: SuccessScreenProps) {
+export function SuccessScreen({ earnedCents }: SuccessScreenProps) {
   const PATH_STEPS = makePathSteps(earnedCents);
 
   const [chartHidden, setChartHidden] = useState(false);
@@ -409,25 +408,6 @@ export function SuccessScreen({ onGoHome, earnedCents }: SuccessScreenProps) {
         </LayoutGroup>
       </div>
 
-      {/* ══ Go to home — pinned at bottom ════════════════════════════════════ */}
-      <div className="px-[18px] pt-[12px] pb-[48px] shrink-0 bg-[#141523]">
-        <motion.button
-          className="relative flex items-center justify-center w-full rounded-[6px] px-[16px] py-[12px] font-poppins font-semibold text-[16px] text-white cursor-pointer border-0 outline-none overflow-hidden"
-          style={{ backgroundColor: '#525268', boxShadow: '0px -6px 0px 0px #7d7d9e, 0px 4px 0px 0px #33334d' }}
-          whileHover={{ y: -2, backgroundColor: '#5e5e7a' }}
-          whileTap={{ y: 1, scale: 0.97, boxShadow: '0px -2px 0px 0px #7d7d9e, 0px 1px 0px 0px #33334d', transition: { duration: 0.06 } }}
-          transition={{ type: 'spring', stiffness: 380, damping: 22 }}
-          onClick={onGoHome}
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <motion.span aria-hidden className="pointer-events-none absolute inset-0"
-            style={{ background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.18) 50%, transparent 65%)' }}
-            initial={{ x: '-110%' }} animate={{ x: '210%' }}
-            transition={{ delay: 2.2, duration: 1.0, ease: [0.4, 0, 0.2, 1], repeat: Infinity, repeatDelay: 3.0 }} />
-          Go to home
-        </motion.button>
-      </div>
 
     </div>
   );
