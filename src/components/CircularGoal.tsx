@@ -87,20 +87,9 @@ const LABELS = [
   'Game bonus', 'Big win!', 'Play game', 'Bonus', 'Referral',
 ];
 
-const REAL_AVATARS = [
-  ASSETS.avatarCashout300,
-  ASSETS.avatarCashout600,
-  ASSETS.avatarPlaygame,
-  ASSETS.avatarBonus,
-];
-
 function randomChipData(): { avatar: string; amount: string; label: string } {
-  const useReal = Math.random() < 0.5;
-  const avatar  = useReal
-    ? REAL_AVATARS[Math.floor(Math.random() * REAL_AVATARS.length)]
-    : makeAvatarUrl(Math.floor(Math.random() * AVATAR_CFG.length));
   return {
-    avatar,
+    avatar: makeAvatarUrl(Math.floor(Math.random() * AVATAR_CFG.length)),
     amount: AMOUNTS[Math.floor(Math.random() * AMOUNTS.length)],
     label:  LABELS [Math.floor(Math.random() * LABELS.length)],
   };
